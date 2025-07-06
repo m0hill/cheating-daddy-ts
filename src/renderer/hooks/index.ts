@@ -111,6 +111,7 @@ const getDefaultKeybinds = (isMacOS: boolean): KeybindConfig => {
     nextResponse: isMacOS ? 'Cmd+]' : 'Ctrl+]',
     scrollUp: isMacOS ? 'Cmd+Shift+Up' : 'Ctrl+Shift+Up',
     scrollDown: isMacOS ? 'Cmd+Shift+Down' : 'Ctrl+Shift+Down',
+    toggleMicrophone: isMacOS ? 'Cmd+Shift+M' : 'Ctrl+Shift+M',
   }
 }
 

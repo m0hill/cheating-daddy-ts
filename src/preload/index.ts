@@ -27,7 +27,7 @@ const electronAPI = {
       language?: string
     ) => ipcRenderer.invoke('initialize-gemini', { apiKey, customPrompt, profile, language }),
 
-    sendAudioContent: (content: { data: string; mimeType: string }) =>
+    sendAudioContent: (content: { data: string; mimeType: string; source?: string }) =>
       ipcRenderer.invoke('send-audio-content', content),
 
     sendImageContent: (content: { data: string; debug?: boolean }) =>
@@ -59,6 +59,10 @@ const electronAPI = {
       ipcRenderer.invoke('update-google-search-setting', enabled),
 
     updateContentProtection: () => ipcRenderer.invoke('update-content-protection'),
+
+    checkMicrophonePermission: () => ipcRenderer.invoke('check-microphone-permission'),
+
+    requestMicrophonePermission: () => ipcRenderer.invoke('request-microphone-permission'),
   },
 
   // IPC send methods (fire and forget)

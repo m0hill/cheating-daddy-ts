@@ -1,5 +1,6 @@
 import type {
   AppState,
+  AudioSourceType,
   ImageQuality,
   LayoutMode,
   ProfileType,
@@ -27,6 +28,10 @@ interface AppStore extends AppState {
   setSelectedImageQuality: (quality: ImageQuality) => void
   setLayoutMode: (mode: LayoutMode) => void
   setAdvancedMode: (enabled: boolean) => void
+
+  // Audio management
+  setCurrentAudioSource: (source: AudioSourceType) => void
+  setMicrophoneEnabled: (enabled: boolean) => void
 
   // Response management
   addResponse: (response: string) => void
@@ -90,6 +95,8 @@ export const useAppStore = create<AppStore>()(
       layoutMode: 'normal',
       advancedMode: false,
       isClickThrough: false,
+      currentAudioSource: 'system' as const,
+      microphoneEnabled: false,
 
       // View management
       setCurrentView: view => set({ currentView: view }),
@@ -116,6 +123,10 @@ export const useAppStore = create<AppStore>()(
         }
       },
       setAdvancedMode: enabled => set({ advancedMode: enabled }),
+
+      // Audio management
+      setCurrentAudioSource: source => set({ currentAudioSource: source }),
+      setMicrophoneEnabled: enabled => set({ microphoneEnabled: enabled }),
 
       // Response management
       addResponse: response => {

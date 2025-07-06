@@ -33,6 +33,8 @@ export interface AppState {
   layoutMode: LayoutMode
   advancedMode: boolean
   isClickThrough: boolean
+  currentAudioSource: AudioSourceType
+  microphoneEnabled: boolean
 }
 
 // Keybinding System
@@ -48,6 +50,7 @@ export interface KeybindConfig {
   nextResponse: string
   scrollUp: string
   scrollDown: string
+  toggleMicrophone: string
 }
 
 // Session and Conversation Management
@@ -76,9 +79,12 @@ export interface IpcResult<T = unknown> {
   error?: string
 }
 
+export type AudioSourceType = 'system' | 'microphone'
+
 export interface AudioContent {
   data: string // base64
   mimeType: string
+  source?: AudioSourceType
 }
 
 export interface ImageContent {

@@ -5,12 +5,14 @@ interface CheddarApi {
   handleShortcut: (shortcutKey: string) => void
   getCurrentView: () => ViewType
   getLayoutMode: () => LayoutMode
+  toggleAudioSource?: () => void
 }
 
 declare global {
   interface Window {
     cheddar: CheddarApi
     captureManualScreenshot: (imageQuality?: ImageQuality) => Promise<void>
+    toggleAudioSource?: () => void
   }
 }
 
@@ -50,6 +52,18 @@ export const handleShortcut = (shortcutKey: string): void => {
         void window.captureManualScreenshot()
       } else {
         console.warn('captureManualScreenshot function not available on AssistantView.')
+      }
+    }
+  }
+
+  // Handle audio source toggle shortcut (Cmd+Shift+M / Ctrl+Shift+M)
+  if (shortcutKey === 'cmd+shift+m' || shortcutKey === 'ctrl+shift+m') {
+    if (currentView === 'assistant') {
+      console.log('Toggling audio source')
+      if (typeof window.toggleAudioSource === 'function') {
+        window.toggleAudioSource()
+      } else {
+        console.warn('toggleAudioSource function not available')
       }
     }
   }

@@ -1,7 +1,7 @@
 import type { ImageQuality, LayoutMode, ProfileType, ScreenshotInterval } from '@shared/types'
 import clsx from 'clsx'
 import { ChevronDown } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   useBackgroundTransparency,
   useFontSize,
@@ -33,10 +33,67 @@ const CustomizeView = () => {
   const [backgroundTransparency, setBackgroundTransparency] = useBackgroundTransparency()
   const [fontSize, setFontSize] = useFontSize()
 
+  // Microphone permission state
+  const [micPermissionStatus, setMicPermissionStatus] = useState<{
+    granted: boolean
+    status: string
+    loading: boolean
+  }>({ granted: false, status: 'unknown', loading: false })
+
   // Resize window when component mounts
   useEffect(() => {
     resizeForCurrentView()
   }, [resizeForCurrentView])
+
+  // Check microphone permission status on mount
+  useEffect(() => {
+    const checkMicPermission = async () => {
+      try {
+        const result = await window.electronAPI.invoke.checkMicrophonePermission()
+        setMicPermissionStatus({
+          granted: result.granted,
+          status: result.status,
+          loading: false,
+        })
+      } catch (error) {
+        console.error('Error checking microphone permission:', error)
+        setMicPermissionStatus({
+          granted: false,
+          status: 'error',
+          loading: false,
+        })
+      }
+    }
+    checkMicPermission()
+  }, [])
+
+  // Handle microphone permission request
+  const handleRequestMicPermission = async () => {
+    setMicPermissionStatus(prev => ({ ...prev, loading: true }))
+    try {
+      const result = await window.electronAPI.invoke.requestMicrophonePermission()
+      // Check status again after request
+      const statusCheck = await window.electronAPI.invoke.checkMicrophonePermission()
+      setMicPermissionStatus({
+        granted: statusCheck.granted,
+        status: statusCheck.status,
+        loading: false,
+      })
+
+      if (result) {
+        console.log('Microphone permission granted!')
+      } else {
+        console.log('Microphone permission denied')
+      }
+    } catch (error) {
+      console.error('Error requesting microphone permission:', error)
+      setMicPermissionStatus({
+        granted: false,
+        status: 'error',
+        loading: false,
+      })
+    }
+  }
 
   // Profile options
   const getProfiles = () => [
@@ -137,6 +194,11 @@ const CustomizeView = () => {
       key: 'scrollDown' as const,
       name: 'Scroll Response Down',
       description: 'Scroll the AI response content down',
+    },
+    {
+      key: 'toggleMicrophone' as const,
+      name: 'Toggle Audio Source',
+      description: 'Switch between system audio and microphone',
     },
   ]
 
@@ -485,6 +547,62 @@ const CustomizeView = () => {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </Section>
+
+        <Section title="Microphone Permissions">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={clsx(
+                      'h-2 w-2 rounded-full',
+                      micPermissionStatus.granted
+                        ? 'bg-green-500'
+                        : micPermissionStatus.status === 'error'
+                          ? 'bg-red-500'
+                          : 'bg-yellow-500'
+                    )}
+                  />
+                  <span className="text-xs font-medium text-[--text-color]">Microphone Access</span>
+                </div>
+                <span
+                  className={clsx(
+                    'rounded px-2 py-0.5 text-[10px] font-medium',
+                    micPermissionStatus.granted
+                      ? 'bg-green-500/20 text-green-400'
+                      : micPermissionStatus.status === 'error'
+                        ? 'bg-red-500/20 text-red-400'
+                        : 'bg-yellow-500/20 text-yellow-400'
+                  )}
+                >
+                  {micPermissionStatus.granted
+                    ? 'Granted'
+                    : micPermissionStatus.status === 'error'
+                      ? 'Error'
+                      : 'Not Granted'}
+                </span>
+              </div>
+              {!micPermissionStatus.granted && (
+                <button
+                  onClick={handleRequestMicPermission}
+                  disabled={micPermissionStatus.loading}
+                  className={clsx(
+                    'rounded px-3 py-1.5 text-xs font-medium transition-all duration-150',
+                    'bg-[--accent-color] text-white hover:bg-[--accent-color]/80',
+                    'focus:outline-none focus:ring-2 focus:ring-[--accent-color]/50',
+                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                  )}
+                >
+                  {micPermissionStatus.loading ? 'Requesting...' : 'Request Permission'}
+                </button>
+              )}
+            </div>
+            <div className={formDescriptionBase}>
+              Microphone access is required for audio capture and voice features. Click the button
+              above to grant permission.
+            </div>
           </div>
         </Section>
 

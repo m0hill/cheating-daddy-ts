@@ -225,11 +225,23 @@ const createGeminiService = () => {
     return monoBuffer
   }
 
-  const sendAudioToGemini = async (base64Data: string): Promise<void> => {
+  const sendAudioToGemini = async (
+    base64Data: string,
+    source: 'system' | 'microphone' = 'system'
+  ): Promise<void> => {
     if (!currentSession) return
 
     try {
-      process.stdout.write('.')
+      process.stdout.write(source === 'microphone' ? 'M' : '.')
+
+      // Add context based on audio source
+      if (source === 'microphone') {
+        // When user speaks, send a text context first
+        currentSession.sendRealtimeInput({
+          text: '[User speaking - this is the interviewee responding]',
+        })
+      }
+
       currentSession.sendRealtimeInput({
         audio: {
           data: base64Data,
@@ -476,7 +488,7 @@ const createGeminiService = () => {
 
         const monoChunk = CHANNELS === 2 ? convertStereoToMono(chunk) : chunk
         const base64Data = monoChunk.toString('base64')
-        sendAudioToGemini(base64Data)
+        sendAudioToGemini(base64Data, 'system')
 
         if (process.env.DEBUG_AUDIO) {
           console.log(`Processed audio chunk: ${chunk.length} bytes`)
@@ -531,10 +543,8 @@ const createGeminiService = () => {
     ipcMain.handle('send-audio-content', async (_, content: AudioContent): Promise<IpcResult> => {
       if (!currentSession) return { success: false, error: 'No active Gemini session' }
       try {
-        process.stdout.write('.')
-        currentSession.sendRealtimeInput({
-          audio: { data: content.data, mimeType: content.mimeType },
-        })
+        const source = content.source || 'system'
+        await sendAudioToGemini(content.data, source)
         return { success: true }
       } catch (error) {
         console.error('Error sending audio:', error)
@@ -664,8 +674,6 @@ const createGeminiService = () => {
       async (_, enabled: boolean): Promise<IpcResult> => {
         try {
           console.log('Google Search setting updated to:', enabled)
-          // The setting is already saved in localStorage by the renderer
-          // This is just for logging/confirmation
           return { success: true }
         } catch (error) {
           console.error('Error updating Google Search setting:', error)

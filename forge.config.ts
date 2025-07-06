@@ -14,13 +14,16 @@ const config: ForgeConfig = {
     extraResource: ['./assets/SystemAudioDump'],
     name: 'Cheating Daddy',
     icon: './assets/logo',
-    // osxSign: {
-    //   identity: '-',
-    //   optionsForFile: () => ({
-    //     entitlements: 'entitlements.plist',
-    //     hardenedRuntime: true
-    //   }),
-    // },
+    osxSign: {
+      identity: '-',
+      optionsForFile: () => ({
+        entitlements: 'entitlements.plist',
+        hardenedRuntime: true
+      }),
+    },
+    extendInfo: {
+      NSMicrophoneUsageDescription: 'This app needs access to the microphone to capture your voice during interviews for AI assistance.'
+    },
   },
   rebuildConfig: {},
   makers: [

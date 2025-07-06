@@ -2,7 +2,15 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { IpcEvents, KeybindConfig, ViewType } from '@shared/types'
-import { BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, session } from 'electron'
+import {
+  BrowserWindow,
+  desktopCapturer,
+  globalShortcut,
+  ipcMain,
+  screen,
+  session,
+  systemPreferences,
+} from 'electron'
 export const createWindowManager = () => {
   let mainWindow: BrowserWindow | null = null
   let mouseEventsIgnored = false
@@ -38,6 +46,7 @@ export const createWindowManager = () => {
       nextResponse: isMac ? 'Cmd+]' : 'Ctrl+]',
       scrollUp: isMac ? 'Cmd+Shift+Up' : 'Ctrl+Shift+Up',
       scrollDown: isMac ? 'Cmd+Shift+Down' : 'Ctrl+Shift+Down',
+      toggleMicrophone: 'Space',
     }
   }
 
@@ -397,6 +406,27 @@ export const createWindowManager = () => {
     }
   }
 
+  const requestMicrophonePermission = async (): Promise<boolean> => {
+    if (process.platform === 'darwin') {
+      try {
+        const micStatus = systemPreferences.getMediaAccessStatus('microphone')
+        console.log('Current microphone permission status:', micStatus)
+
+        if (micStatus !== 'granted') {
+          console.log('Requesting microphone permission...')
+          const result = await systemPreferences.askForMediaAccess('microphone')
+          console.log('Microphone permission result:', result)
+          return result
+        }
+        return true
+      } catch (error) {
+        console.error('Error requesting microphone permission:', error)
+        return false
+      }
+    }
+    return true // Non-macOS platforms
+  }
+
   // Public API
   const createMainWindow = async (): Promise<BrowserWindow> => {
     // Get layout preference (default to 'normal')
@@ -419,16 +449,41 @@ export const createWindowManager = () => {
         webSecurity: true,
         allowRunningInsecureContent: false,
         preload: join(__dirname, 'index.js'),
+        // Enable media permissions
+        experimentalFeatures: true,
       },
       backgroundColor: '#00000000',
     })
 
     // Setup display media handler
-    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+    session.defaultSession.setDisplayMediaRequestHandler((_, callback) => {
       desktopCapturer.getSources({ types: ['screen'] }).then(sources => {
         callback({ video: sources[0], audio: 'loopback' })
       })
     })
+
+    // Setup permission handler for microphone access
+    session.defaultSession.setPermissionRequestHandler((_, permission, callback) => {
+      console.log('Permission requested:', permission)
+      if (permission === 'media') {
+        // Allow media access (includes microphone and camera)
+        callback(true)
+      } else {
+        // For other permissions, use default behavior
+        callback(false)
+      }
+    })
+
+    // Request microphone permission proactively
+    if (process.platform === 'darwin') {
+      try {
+        console.log('Proactively requesting microphone permission on app startup...')
+        const result = await requestMicrophonePermission()
+        console.log('Startup microphone permission result:', result)
+      } catch (error) {
+        console.error('Error requesting microphone permission on startup:', error)
+      }
+    }
 
     mainWindow.setResizable(false)
     mainWindow.setContentProtection(true)
@@ -499,6 +554,37 @@ export const createWindowManager = () => {
         }
       }
     )
+
+    // Microphone permission handlers
+    ipcMain.handle(
+      'check-microphone-permission',
+      async (): Promise<{ granted: boolean; status: string }> => {
+        if (process.platform === 'darwin') {
+          try {
+            const status = systemPreferences.getMediaAccessStatus('microphone')
+            return { granted: status === 'granted', status }
+          } catch (error) {
+            console.error('Error checking microphone permission:', error)
+            return { granted: false, status: 'error' }
+          }
+        }
+        return { granted: true, status: 'not-applicable' }
+      }
+    )
+
+    ipcMain.handle('request-microphone-permission', async (): Promise<boolean> => {
+      if (process.platform === 'darwin') {
+        try {
+          const result = await systemPreferences.askForMediaAccess('microphone')
+          console.log('Microphone permission requested, result:', result)
+          return result
+        } catch (error) {
+          console.error('Error requesting microphone permission:', error)
+          return false
+        }
+      }
+      return true
+    })
 
     // Window resize handler
     ipcMain.handle('update-sizes', async (): Promise<{ success: boolean; error?: string }> => {

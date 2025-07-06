@@ -1,4 +1,4 @@
-import type { ImageQuality, ProfileType, ScreenshotInterval } from '@shared/types'
+import type { ProfileType } from '@shared/types'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFontSize, useIpc, useMediaCapture } from '../../hooks'
@@ -14,13 +14,26 @@ declare global {
 }
 
 const AssistantView = () => {
-  const { responses, currentResponseIndex, selectedProfile, setCurrentResponseIndex } =
-    useAppStore()
+  const {
+    responses,
+    currentResponseIndex,
+    selectedProfile,
+    selectedScreenshotInterval,
+    selectedImageQuality,
+    setCurrentResponseIndex,
+  } = useAppStore()
 
   const [textInput, setTextInput] = useState('')
   const responseContainerRef = useRef<HTMLDivElement>(null)
   const electronAPI = useIpc()
-  const { sendTextMessage, startCapture, stopCapture } = useMediaCapture()
+  const {
+    sendTextMessage,
+    startCapture,
+    stopCapture,
+    currentAudioSource,
+    microphoneEnabled,
+    toggleAudioSource,
+  } = useMediaCapture()
   const [fontSize] = useFontSize()
 
   // Profile names mapping
@@ -159,12 +172,7 @@ const AssistantView = () => {
   useEffect(() => {
     const initializeCapture = async () => {
       try {
-        const screenshotInterval =
-          (localStorage.getItem('selectedScreenshotInterval') as ScreenshotInterval) || '5'
-        const imageQuality =
-          (localStorage.getItem('selectedImageQuality') as ImageQuality) || 'medium'
-
-        await startCapture(screenshotInterval, imageQuality)
+        await startCapture(selectedScreenshotInterval, selectedImageQuality)
       } catch (error) {
         console.error('Failed to start media capture:', error)
       }
@@ -176,7 +184,7 @@ const AssistantView = () => {
     return () => {
       stopCapture()
     }
-  }, [startCapture, stopCapture])
+  }, [startCapture, stopCapture, selectedScreenshotInterval, selectedImageQuality])
 
   const navButtonClasses =
     'flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-white transition-all duration-150 ease-in-out hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent'
@@ -203,6 +211,28 @@ const AssistantView = () => {
           <span className="min-w-16 flex-shrink-0 text-center text-xs text-[--description-color]">
             {getResponseCounter()}
           </span>
+        )}
+
+        {/* Audio Source Indicator */}
+        {microphoneEnabled && (
+          <div className="flex items-center gap-1.5">
+            <div
+              className={`h-2 w-2 rounded-full ${
+                currentAudioSource === 'system' ? 'bg-blue-500' : 'bg-green-500'
+              }`}
+              title={`Audio source: ${currentAudioSource === 'system' ? 'System (Interviewer)' : 'Microphone (You)'}`}
+            />
+            <span className="text-xs text-[--description-color]">
+              {currentAudioSource === 'system' ? 'SYS' : 'MIC'}
+            </span>
+            <button
+              onClick={toggleAudioSource}
+              className="text-xs text-[--description-color] hover:text-[--text-color] transition-colors"
+              title="Press Cmd+Shift+M to toggle audio source"
+            >
+              (⌘⇧M)
+            </button>
+          </div>
         )}
 
         <input

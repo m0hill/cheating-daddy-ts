@@ -1,4 +1,4 @@
-import type { ImageQuality, ScreenshotInterval } from '@shared/types'
+import type { ImageQuality, ScreenshotInterval, AudioSourceType } from '@shared/types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useIpc } from './index'
 
@@ -22,6 +22,8 @@ interface MediaCaptureState {
   isCapturing: boolean
   error: string | null
   currentImageQuality: ImageQuality
+  currentAudioSource: AudioSourceType
+  microphoneEnabled: boolean
 }
 
 export const useMediaCapture = () => {
@@ -29,12 +31,18 @@ export const useMediaCapture = () => {
     isCapturing: false,
     error: null,
     currentImageQuality: 'medium',
+    currentAudioSource: 'system',
+    microphoneEnabled: false,
   })
   const electronAPI = useIpc()
-  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null) // For system audio
+  const videoStreamRef = useRef<MediaStream | null>(null) // For screenshots
+  const micStreamRef = useRef<MediaStream | null>(null)
   const screenshotIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
+  const micAudioContextRef = useRef<AudioContext | null>(null)
   const audioProcessorRef = useRef<ScriptProcessorNode | null>(null)
+  const micProcessorRef = useRef<ScriptProcessorNode | null>(null)
   const hiddenVideoRef = useRef<HTMLVideoElement | null>(null)
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const offscreenContextRef = useRef<CanvasRenderingContext2D | null>(null)
@@ -44,12 +52,33 @@ export const useMediaCapture = () => {
     audioStartTime: null,
   })
 
+  // Add a ref to track the current audio source to avoid stale state in callbacks
+  const audioSourceRef = useRef(state.currentAudioSource)
+
   const isLinux = electronAPI.platform.isLinux
   const isMacOS = electronAPI.platform.isMacOS
 
   const SAMPLE_RATE = 24000
   const AUDIO_CHUNK_DURATION = 0.1
   const BUFFER_SIZE = 4096
+
+  // Keep the ref in sync with the state
+  useEffect(() => {
+    audioSourceRef.current = state.currentAudioSource
+  }, [state.currentAudioSource])
+
+  // This effect will manage the macOS system audio capture
+  useEffect(() => {
+    if (!isMacOS || !state.isCapturing) return
+
+    if (state.currentAudioSource === 'system') {
+      console.log('IPC: Starting macOS audio capture')
+      electronAPI.invoke.startMacOSAudio()
+    } else {
+      console.log('IPC: Stopping macOS audio capture')
+      electronAPI.invoke.stopMacOSAudio()
+    }
+  }, [isMacOS, state.isCapturing, state.currentAudioSource, electronAPI.invoke])
 
   const cleanOldTokens = useCallback(() => {
     const oneMinuteAgo = Date.now() - 60 * 1000
@@ -113,7 +142,7 @@ export const useMediaCapture = () => {
     return btoa(binary)
   }, [])
 
-  const setupLinuxMicProcessing = useCallback(
+  const setupMicrophoneProcessing = useCallback(
     async (micStream: MediaStream) => {
       const micAudioContext = new AudioContext({ sampleRate: SAMPLE_RATE })
       const micSource = micAudioContext.createMediaStreamSource(micStream)
@@ -122,6 +151,9 @@ export const useMediaCapture = () => {
       const samplesPerChunk = SAMPLE_RATE * AUDIO_CHUNK_DURATION
 
       micProcessor.onaudioprocess = async e => {
+        // Use the ref here instead of state to avoid stale state
+        if (audioSourceRef.current !== 'microphone') return
+
         const inputData = e.inputBuffer.getChannelData(0)
         audioBuffer.push(...inputData)
         while (audioBuffer.length >= samplesPerChunk) {
@@ -131,17 +163,19 @@ export const useMediaCapture = () => {
           await electronAPI.invoke.sendAudioContent({
             data: base64Data,
             mimeType: 'audio/pcm;rate=24000',
+            source: 'microphone',
           })
         }
       }
       micSource.connect(micProcessor)
       micProcessor.connect(micAudioContext.destination)
-      audioProcessorRef.current = micProcessor
+      micAudioContextRef.current = micAudioContext
+      micProcessorRef.current = micProcessor
     },
     [electronAPI.invoke, convertFloat32ToInt16, arrayBufferToBase64]
   )
 
-  const setupWindowsLoopbackProcessing = useCallback(async () => {
+  const setupSystemAudioProcessing = useCallback(async () => {
     if (!mediaStreamRef.current) return
     const audioContext = new AudioContext({ sampleRate: SAMPLE_RATE })
     const source = audioContext.createMediaStreamSource(mediaStreamRef.current)
@@ -150,6 +184,9 @@ export const useMediaCapture = () => {
     const samplesPerChunk = SAMPLE_RATE * AUDIO_CHUNK_DURATION
 
     processor.onaudioprocess = async e => {
+      // Use the ref here instead of state to avoid stale state
+      if (audioSourceRef.current !== 'system') return
+
       const inputData = e.inputBuffer.getChannelData(0)
       audioBuffer.push(...inputData)
       while (audioBuffer.length >= samplesPerChunk) {
@@ -159,6 +196,7 @@ export const useMediaCapture = () => {
         await electronAPI.invoke.sendAudioContent({
           data: base64Data,
           mimeType: 'audio/pcm;rate=24000',
+          source: 'system',
         })
       }
     }
@@ -170,8 +208,14 @@ export const useMediaCapture = () => {
 
   const captureScreenshot = useCallback(
     async (imageQuality: ImageQuality = 'medium', isManual = false): Promise<void> => {
-      if (!mediaStreamRef.current || !mediaStreamRef.current.active) {
-        console.warn('Media stream not available or inactive. Skipping screenshot.')
+      // Use video stream for screenshots, fallback to media stream
+      const streamToUse = videoStreamRef.current || mediaStreamRef.current
+      const hasActiveVideoTrack = streamToUse
+        ?.getVideoTracks()
+        .some(track => track.readyState === 'live')
+
+      if (!streamToUse || !hasActiveVideoTrack) {
+        console.warn('Video stream not available or no active video track. Skipping screenshot.')
         return
       }
       console.log(`Capturing ${isManual ? 'manual' : 'automated'} screenshot...`)
@@ -182,7 +226,7 @@ export const useMediaCapture = () => {
 
       if (!hiddenVideoRef.current) {
         hiddenVideoRef.current = document.createElement('video')
-        hiddenVideoRef.current.srcObject = mediaStreamRef.current
+        hiddenVideoRef.current.srcObject = streamToUse
         hiddenVideoRef.current.muted = true
         hiddenVideoRef.current.playsInline = true
         await hiddenVideoRef.current.play()
@@ -254,13 +298,29 @@ export const useMediaCapture = () => {
         audioProcessorRef.current.disconnect()
         audioProcessorRef.current = null
       }
+      if (micProcessorRef.current) {
+        micProcessorRef.current.disconnect()
+        micProcessorRef.current = null
+      }
       if (audioContextRef.current) {
         await audioContextRef.current.close()
         audioContextRef.current = null
       }
+      if (micAudioContextRef.current) {
+        await micAudioContextRef.current.close()
+        micAudioContextRef.current = null
+      }
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach(track => track.stop())
         mediaStreamRef.current = null
+      }
+      if (videoStreamRef.current) {
+        videoStreamRef.current.getTracks().forEach(track => track.stop())
+        videoStreamRef.current = null
+      }
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach(track => track.stop())
+        micStreamRef.current = null
       }
       if (isMacOS) {
         await electronAPI.invoke.stopMacOSAudio()
@@ -271,7 +331,13 @@ export const useMediaCapture = () => {
       }
       offscreenCanvasRef.current = null
       offscreenContextRef.current = null
-      setState(prev => ({ ...prev, isCapturing: false, error: null }))
+      setState(prev => ({
+        ...prev,
+        isCapturing: false,
+        error: null,
+        currentAudioSource: 'system',
+        microphoneEnabled: false,
+      }))
       console.log('Media capture stopped')
     } catch (error) {
       console.error('Error stopping capture:', error)
@@ -306,6 +372,35 @@ export const useMediaCapture = () => {
     [state.currentImageQuality, captureScreenshot, sendTextMessage]
   )
 
+  const toggleAudioSource = useCallback(() => {
+    if (!state.microphoneEnabled) {
+      console.warn('Microphone not available')
+      return
+    }
+
+    setState(prev => ({
+      ...prev,
+      currentAudioSource: prev.currentAudioSource === 'system' ? 'microphone' : 'system',
+    }))
+
+    console.log(
+      `Switched to ${state.currentAudioSource === 'system' ? 'microphone' : 'system'} audio`
+    )
+  }, [state.microphoneEnabled, state.currentAudioSource])
+
+  const setAudioSource = useCallback(
+    (source: AudioSourceType) => {
+      if (source === 'microphone' && !state.microphoneEnabled) {
+        console.warn('Microphone not available')
+        return
+      }
+
+      setState(prev => ({ ...prev, currentAudioSource: source }))
+      console.log(`Audio source set to: ${source}`)
+    },
+    [state.microphoneEnabled]
+  )
+
   const startCapture = useCallback(
     async (
       screenshotIntervalSeconds: ScreenshotInterval = '5',
@@ -320,15 +415,84 @@ export const useMediaCapture = () => {
       tokenTrackerRef.current = { tokens: [], audioStartTime: null }
 
       try {
-        const displayMediaOptions: DisplayMediaStreamOptions = {
+        // First get video stream for screenshots
+        const videoDisplayOptions: DisplayMediaStreamOptions = {
           video: { frameRate: 1, width: { ideal: 1920 }, height: { ideal: 1080 } },
           audio: false,
         }
 
-        if (isMacOS) {
-          await electronAPI.invoke.startMacOSAudio()
-        } else if (isLinux) {
-          try {
+        // Audio options for system audio (Windows only)
+        const audioDisplayOptions: DisplayMediaStreamOptions = {
+          video: false,
+          audio: {
+            sampleRate: SAMPLE_RATE,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        }
+
+        // Setup microphone access for all platforms
+        try {
+          // First check if we have permission (macOS specific)
+          if (isMacOS) {
+            const permissionCheck = await electronAPI.invoke.checkMicrophonePermission()
+            console.log('Microphone permission check:', permissionCheck)
+
+            if (!permissionCheck.granted) {
+              console.log('Requesting microphone permission...')
+              const permissionGranted = await electronAPI.invoke.requestMicrophonePermission()
+              console.log('Microphone permission result:', permissionGranted)
+
+              if (!permissionGranted) {
+                console.warn('Microphone permission denied by user')
+                setState(prev => ({ ...prev, microphoneEnabled: false }))
+                // Don't return here, still try to get video stream
+              } else {
+                // Permission granted, now try to get microphone stream
+                try {
+                  const micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                      sampleRate: SAMPLE_RATE,
+                      channelCount: 1,
+                      echoCancellation: true,
+                      noiseSuppression: true,
+                      autoGainControl: true,
+                    },
+                    video: false,
+                  })
+                  micStreamRef.current = micStream
+                  await setupMicrophoneProcessing(micStream)
+                  setState(prev => ({ ...prev, microphoneEnabled: true }))
+                  console.log('Microphone access granted')
+                } catch (micStreamError) {
+                  console.warn(
+                    'Failed to get microphone stream after permission granted:',
+                    micStreamError
+                  )
+                  setState(prev => ({ ...prev, microphoneEnabled: false }))
+                }
+              }
+            } else {
+              // Permission already granted, get microphone stream
+              const micStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                  sampleRate: SAMPLE_RATE,
+                  channelCount: 1,
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true,
+                },
+                video: false,
+              })
+              micStreamRef.current = micStream
+              await setupMicrophoneProcessing(micStream)
+              setState(prev => ({ ...prev, microphoneEnabled: true }))
+              console.log('Microphone access granted (permission already granted)')
+            }
+          } else {
+            // Non-macOS platforms - directly try to get microphone access
             const micStream = await navigator.mediaDevices.getUserMedia({
               audio: {
                 sampleRate: SAMPLE_RATE,
@@ -339,29 +503,51 @@ export const useMediaCapture = () => {
               },
               video: false,
             })
-            await setupLinuxMicProcessing(micStream)
-          } catch (micError) {
-            console.warn('Failed to get microphone access on Linux:', micError)
+            micStreamRef.current = micStream
+            await setupMicrophoneProcessing(micStream)
+            setState(prev => ({ ...prev, microphoneEnabled: true }))
+            console.log('Microphone access granted')
           }
-        } else {
-          // Windows
-          displayMediaOptions.audio = {
-            sampleRate: SAMPLE_RATE,
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          }
+        } catch (micError) {
+          console.warn('Failed to get microphone access:', micError)
+          setState(prev => ({ ...prev, microphoneEnabled: false }))
         }
 
-        mediaStreamRef.current = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions)
+        // Get video stream for screenshots
+        videoStreamRef.current = await navigator.mediaDevices.getDisplayMedia(videoDisplayOptions)
+        console.log('Video stream for screenshots obtained')
 
-        if (mediaStreamRef.current.getAudioTracks().length > 0 && !isMacOS && !isLinux) {
-          await setupWindowsLoopbackProcessing()
+        if (isMacOS) {
+          // On macOS, system audio is now handled by the useEffect above.
+          // No need to do anything here.
+        } else if (isLinux) {
+          // Linux uses microphone only, no system audio
+        } else {
+          // Windows - get separate audio stream for system audio
+          try {
+            mediaStreamRef.current =
+              await navigator.mediaDevices.getDisplayMedia(audioDisplayOptions)
+            if (mediaStreamRef.current.getAudioTracks().length > 0) {
+              await setupSystemAudioProcessing()
+              console.log('System audio stream obtained')
+            }
+          } catch (audioError) {
+            console.warn('Failed to get system audio stream:', audioError)
+          }
         }
 
         if (screenshotIntervalSeconds !== 'manual') {
           const intervalMs = parseInt(screenshotIntervalSeconds) * 1000
+          console.log(
+            `Setting up screenshot interval: ${screenshotIntervalSeconds}s (${intervalMs}ms)`
+          )
+
+          // Clear any existing interval first
+          if (screenshotIntervalRef.current) {
+            clearInterval(screenshotIntervalRef.current)
+            screenshotIntervalRef.current = null
+          }
+
           screenshotIntervalRef.current = setInterval(
             () => captureScreenshot(imageQuality),
             intervalMs
@@ -382,8 +568,8 @@ export const useMediaCapture = () => {
       isMacOS,
       isLinux,
       electronAPI.invoke,
-      setupLinuxMicProcessing,
-      setupWindowsLoopbackProcessing,
+      setupMicrophoneProcessing,
+      setupSystemAudioProcessing,
       captureScreenshot,
       stopCapture,
     ]
@@ -391,14 +577,20 @@ export const useMediaCapture = () => {
 
   useEffect(() => {
     window.captureManualScreenshot = captureManualScreenshot
-    console.log('captureManualScreenshot function has been attached to the window object.')
+    window.toggleAudioSource = toggleAudioSource
+    console.log(
+      'captureManualScreenshot and toggleAudioSource functions have been attached to the window object.'
+    )
 
     // Cleanup function to remove it when the component unmounts
     return () => {
       delete (window as Partial<Window>).captureManualScreenshot
-      console.log('captureManualScreenshot function has been removed from the window object.')
+      delete (window as Partial<Window>).toggleAudioSource
+      console.log(
+        'captureManualScreenshot and toggleAudioSource functions have been removed from the window object.'
+      )
     }
-  }, [captureManualScreenshot])
+  }, [captureManualScreenshot, toggleAudioSource])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -416,6 +608,8 @@ export const useMediaCapture = () => {
     stopCapture,
     captureManualScreenshot,
     sendTextMessage,
+    toggleAudioSource,
+    setAudioSource,
     // Expose platform info for conditional rendering
     platform: {
       isMacOS,
