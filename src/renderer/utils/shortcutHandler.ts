@@ -1,4 +1,3 @@
-// Global shortcut handler for backward compatibility with main process
 import { useAppStore } from '../stores/appStore'
 
 // Global shortcut handler function
@@ -28,15 +27,15 @@ export const handleShortcut = (shortcutKey: string): void => {
       } else {
         console.warn('Could not find main-view element')
       }
-    } else {
-      // In other views, take manual screenshot using media capture
-      console.log('Taking manual screenshot from current view')
+    } else if (currentView === 'assistant') {
+      // In assistant view, take manual screenshot
+      console.log('Taking manual screenshot from assistant view')
 
       // Trigger manual screenshot via global function if available
       if (typeof (window as any).captureManualScreenshot === 'function') {
         ;(window as any).captureManualScreenshot()
       } else {
-        console.warn('captureManualScreenshot function not available')
+        console.warn('captureManualScreenshot function not available on AssistantView.')
       }
     }
   }

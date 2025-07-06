@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai'
+import { GoogleGenAI, Modality } from '@google/genai'
 import type {
   AudioContent,
   ConversationTurn,
@@ -367,7 +367,7 @@ const createGeminiService = () => {
           },
         },
         config: {
-          responseModalities: ['TEXT'] as any[],
+          responseModalities: [Modality.TEXT],
           tools: enabledTools,
           inputAudioTranscription: {},
           contextWindowCompression: { slidingWindow: {} },

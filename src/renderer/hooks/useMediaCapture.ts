@@ -384,6 +384,17 @@ export const useMediaCapture = () => {
     ]
   )
 
+  useEffect(() => {
+    ;(window as any).captureManualScreenshot = captureManualScreenshot
+    console.log('captureManualScreenshot function has been attached to the window object.')
+
+    // Cleanup function to remove it when the component unmounts
+    return () => {
+      delete (window as any).captureManualScreenshot
+      console.log('captureManualScreenshot function has been removed from the window object.')
+    }
+  }, [captureManualScreenshot])
+
   // Cleanup on unmount
   useEffect(() => {
     // This is the cleanup function for the effect.

@@ -9,7 +9,7 @@ import HelpView from './components/views/HelpView'
 import HistoryView from './components/views/HistoryView'
 import MainView from './components/views/MainView'
 import OnboardingView from './components/views/OnboardingView'
-import { useIpc, useWindowResize } from './hooks'
+import { useConversationStorage, useIpc, useWindowResize } from './hooks'
 import { useAppStore } from './stores/appStore'
 
 const App = () => {
@@ -29,6 +29,8 @@ const App = () => {
 
   const electronAPI = useIpc()
   const { resizeForCurrentView } = useWindowResize()
+
+  useConversationStorage()
 
   // Set up IPC event listeners
   useEffect(() => {

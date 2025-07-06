@@ -176,7 +176,7 @@ export const useAppStore = create<AppStore>()(
       },
     }),
     {
-      name: 'dupe-store',
+      name: 'hope-app-store',
       // Only persist certain state
       partialize: state => ({
         selectedProfile: state.selectedProfile,
