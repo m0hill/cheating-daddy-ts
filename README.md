@@ -6,6 +6,8 @@
 > [!NOTE]
 > During testing it wont answer if you ask something, you need to simulate interviewer asking question, which it will answer
 
+This is a TypeScript/React/Tailwind/Vite fork of [Cheating Daddy](https://github.com/sohzm/cheating-daddy) by [sohzm](https://github.com/sohzm).
+
 A real-time AI assistant that provides contextual help during video calls, interviews, presentations, and meetings using screen capture and audio analysis.
 
 ## Features
