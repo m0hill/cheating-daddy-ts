@@ -1,14 +1,15 @@
-import { useEffect } from 'react';
-import { useAppStore } from '../../stores/appStore';
+import type { ImageQuality, LayoutMode, ProfileType, ScreenshotInterval } from '@shared/types'
+import clsx from 'clsx'
+import { ChevronDown } from 'lucide-react'
+import { useEffect } from 'react'
 import {
-  useWindowResize,
-  useKeybinds,
-  useGoogleSearch,
   useBackgroundTransparency,
-  useFontSize
-} from '../../hooks';
-import type { ProfileType, ScreenshotInterval, ImageQuality, LayoutMode } from '@shared/types';
-import './CustomizeView.css';
+  useFontSize,
+  useGoogleSearch,
+  useKeybinds,
+  useWindowResize,
+} from '../../hooks'
+import { useAppStore } from '../../stores/appStore'
 
 export default function CustomizeView() {
   const {
@@ -24,47 +25,27 @@ export default function CustomizeView() {
     setSelectedImageQuality,
     setLayoutMode,
     setAdvancedMode,
-  } = useAppStore();
+  } = useAppStore()
 
-  const { resizeForCurrentView } = useWindowResize();
-  const { keybinds, updateKeybind, resetKeybinds } = useKeybinds();
-  const [googleSearchEnabled, setGoogleSearchEnabled] = useGoogleSearch();
-  const [backgroundTransparency, setBackgroundTransparency] = useBackgroundTransparency();
-  const [fontSize, setFontSize] = useFontSize();
+  const { resizeForCurrentView } = useWindowResize()
+  const { keybinds, updateKeybind, resetKeybinds } = useKeybinds()
+  const [googleSearchEnabled, setGoogleSearchEnabled] = useGoogleSearch()
+  const [backgroundTransparency, setBackgroundTransparency] = useBackgroundTransparency()
+  const [fontSize, setFontSize] = useFontSize()
 
   // Resize window when component mounts
   useEffect(() => {
-    resizeForCurrentView();
-  }, [resizeForCurrentView]);
+    resizeForCurrentView()
+  }, [resizeForCurrentView])
 
   // Profile options
   const getProfiles = () => [
-    {
-      value: 'interview' as ProfileType,
-      name: 'Job Interview',
-      description: 'Get help with answering interview questions',
-    },
-    {
-      value: 'sales' as ProfileType,
-      name: 'Sales Call',
-      description: 'Assist with sales conversations and objection handling',
-    },
-    {
-      value: 'meeting' as ProfileType,
-      name: 'Business Meeting',
-      description: 'Support for professional meetings and discussions',
-    },
-    {
-      value: 'presentation' as ProfileType,
-      name: 'Presentation',
-      description: 'Help with presentations and public speaking',
-    },
-    {
-      value: 'negotiation' as ProfileType,
-      name: 'Negotiation',
-      description: 'Guidance for business negotiations and deals',
-    },
-  ];
+    { value: 'interview' as ProfileType, name: 'Job Interview' },
+    { value: 'sales' as ProfileType, name: 'Sales Call' },
+    { value: 'meeting' as ProfileType, name: 'Business Meeting' },
+    { value: 'presentation' as ProfileType, name: 'Presentation' },
+    { value: 'negotiation' as ProfileType, name: 'Negotiation' },
+  ]
 
   // Language options
   const getLanguages = () => [
@@ -98,7 +79,7 @@ export default function CustomizeView() {
     { value: 'pl-PL', name: 'Polish (Poland)' },
     { value: 'ru-RU', name: 'Russian (Russia)' },
     { value: 'th-TH', name: 'Thai (Thailand)' },
-  ];
+  ]
 
   // Keybind actions
   const getKeybindActions = () => [
@@ -130,12 +111,12 @@ export default function CustomizeView() {
     {
       key: 'toggleClickThrough' as const,
       name: 'Toggle Click-through Mode',
-      description: 'Enable/disable click-through functionality',
+      description: 'Enable/disable click-through',
     },
     {
       key: 'nextStep' as const,
       name: 'Ask Next Step',
-      description: 'Take screenshot and ask AI for the next step suggestion',
+      description: 'Take screenshot and ask AI for suggestion',
     },
     {
       key: 'previousResponse' as const,
@@ -157,413 +138,396 @@ export default function CustomizeView() {
       name: 'Scroll Response Down',
       description: 'Scroll the AI response content down',
     },
-  ];
+  ]
 
   // Event handlers
-  const handleProfileSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedProfile(e.target.value as ProfileType);
-  };
-
-  const handleLanguageSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedLanguage(e.target.value);
-  };
-
-  const handleScreenshotIntervalSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedScreenshotInterval(e.target.value as ScreenshotInterval);
-  };
-
-  const handleImageQualitySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedImageQuality(e.target.value as ImageQuality);
-  };
-
-  const handleLayoutModeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLayoutMode(e.target.value as LayoutMode);
-  };
-
-  const handleCustomPromptInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    localStorage.setItem('customPrompt', e.target.value);
-  };
-
-  const handleKeybindChange = (action: string, value: string) => {
-    updateKeybind(action as keyof typeof keybinds, value);
-  };
+  const handleProfileSelect = (e: React.ChangeEvent<HTMLSelectElement>) =>
+    setSelectedProfile(e.target.value as ProfileType)
+  const handleLanguageSelect = (e: React.ChangeEvent<HTMLSelectElement>) =>
+    setSelectedLanguage(e.target.value)
+  const handleScreenshotIntervalSelect = (e: React.ChangeEvent<HTMLSelectElement>) =>
+    setSelectedScreenshotInterval(e.target.value as ScreenshotInterval)
+  const handleImageQualitySelect = (e: React.ChangeEvent<HTMLSelectElement>) =>
+    setSelectedImageQuality(e.target.value as ImageQuality)
+  const handleLayoutModeSelect = (e: React.ChangeEvent<HTMLSelectElement>) =>
+    setLayoutMode(e.target.value as LayoutMode)
+  const handleCustomPromptInput = (e: React.ChangeEvent<HTMLTextAreaElement>) =>
+    localStorage.setItem('customPrompt', e.target.value)
+  const handleKeybindChange = (action: string, value: string) =>
+    updateKeybind(action as keyof typeof keybinds, value)
 
   const handleKeybindInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-
-    const modifiers = [];
-
-    // Check modifiers
-    if (e.ctrlKey) modifiers.push('Ctrl');
-    if (e.metaKey) modifiers.push('Cmd');
-    if (e.altKey) modifiers.push('Alt');
-    if (e.shiftKey) modifiers.push('Shift');
-
-    // Get the main key
-    let mainKey = e.key;
-
-    // Handle special keys
-    switch (e.code) {
-      case 'ArrowUp':
-        mainKey = 'Up';
-        break;
-      case 'ArrowDown':
-        mainKey = 'Down';
-        break;
-      case 'ArrowLeft':
-        mainKey = 'Left';
-        break;
-      case 'ArrowRight':
-        mainKey = 'Right';
-        break;
-      case 'Enter':
-        mainKey = 'Enter';
-        break;
-      case 'Space':
-        mainKey = 'Space';
-        break;
-      case 'Backslash':
-        mainKey = '\\';
-        break;
-      default:
-        if (e.key.length === 1) {
-          mainKey = e.key.toUpperCase();
-        }
-        break;
+    e.preventDefault()
+    const modifiers: string[] = []
+    if (e.ctrlKey) modifiers.push('Ctrl')
+    if (e.metaKey) modifiers.push('Cmd')
+    if (e.altKey) modifiers.push('Alt')
+    if (e.shiftKey) modifiers.push('Shift')
+    let mainKey = e.key
+    const specialKeys: { [key: string]: string } = {
+      ArrowUp: 'Up',
+      ArrowDown: 'Down',
+      ArrowLeft: 'Left',
+      ArrowRight: 'Right',
+      Enter: 'Enter',
+      Space: 'Space',
+      Backslash: '\\',
     }
-
-    // Skip if only modifier keys are pressed
-    if (['Control', 'Meta', 'Alt', 'Shift'].includes(e.key)) {
-      return;
-    }
-
-    // Construct keybind string
-    const keybind = [...modifiers, mainKey].join('+');
-
-    // Get the action from the input's data attribute
-    const action = (e.target as HTMLInputElement).dataset.action;
+    mainKey = specialKeys[e.code] || (e.key.length === 1 ? e.key.toUpperCase() : mainKey)
+    if (['Control', 'Meta', 'Alt', 'Shift'].includes(e.key)) return
+    const keybind = [...modifiers, mainKey].join('+')
+    const action = (e.target as HTMLInputElement).dataset.action
     if (action) {
-      handleKeybindChange(action, keybind);
-      (e.target as HTMLInputElement).value = keybind;
-      (e.target as HTMLInputElement).blur();
+      handleKeybindChange(action, keybind)
+      ;(e.target as HTMLInputElement).value = keybind
+      ;(e.target as HTMLInputElement).blur()
     }
-  };
-
+  }
   const handleKeybindFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.placeholder = 'Press key combination...';
-    e.target.select();
-  };
+    e.target.placeholder = 'Press key combination...'
+    e.target.select()
+  }
 
-  const profiles = getProfiles();
-  const languages = getLanguages();
-  const currentProfile = profiles.find(p => p.value === selectedProfile);
-  const currentLanguage = languages.find(l => l.value === selectedLanguage);
+  const profiles = getProfiles()
+  const languages = getLanguages()
+  const keybindActions = getKeybindActions()
+  const currentProfile = profiles.find(p => p.value === selectedProfile)
+  const currentLanguage = languages.find(l => l.value === selectedLanguage)
+
+  // Reusable Tailwind classes
+  const formControlBase =
+    'min-h-[16px] w-full rounded border border-[--input-border] bg-[--input-background] px-2.5 py-2 text-xs font-normal text-[--text-color] transition-all duration-150 ease-in-out focus:border-[--focus-border-color] focus:bg-[--input-focus-background] focus:shadow-[0_0_0_2px_var(--focus-shadow)] focus:outline-none hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(0,0,0,0.35)]'
+  const formLabelBase = 'flex items-center gap-1.5 text-xs font-medium text-[--label-color]'
+  const formDescriptionBase = 'mt-0.5 text-[11px] leading-tight text-[--description-color]'
+  const currentSelectionBadge =
+    'inline-flex items-center gap-1 rounded border border-[rgba(52,211,153,0.2)] bg-[rgba(52,211,153,0.1)] px-1.5 py-0.5 text-[10px] font-medium text-[#34d399]'
+  const sectionBase = 'rounded-md border p-4 backdrop-blur-sm'
+  const sectionTitleBase =
+    'mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider'
+  const checkboxLabelBase =
+    'flex cursor-pointer select-none items-center gap-2 text-xs font-medium text-[--label-color]'
+  const checkboxInputBase = 'h-3.5 w-3.5 cursor-pointer accent-[--focus-border-color]'
+
+  const Section = ({
+    title,
+    isDanger,
+    children,
+  }: {
+    title: string
+    isDanger?: boolean
+    children: React.ReactNode
+  }) => (
+    <div
+      className={clsx(
+        sectionBase,
+        isDanger
+          ? 'border-[--danger-border] bg-[--danger-background]'
+          : 'border-[--card-border] bg-[--card-background]'
+      )}
+    >
+      <div
+        className={clsx(
+          sectionTitleBase,
+          isDanger ? 'text-[--danger-color]' : 'text-[--text-color]'
+        )}
+      >
+        <span
+          className={clsx(
+            'h-[14px] w-[3px] rounded-full',
+            isDanger ? 'bg-[--danger-color]' : 'bg-[--accent-color]'
+          )}
+        ></span>
+        <span>{title}</span>
+      </div>
+      {children}
+    </div>
+  )
+
+  const FormGroup = ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode
+    className?: string
+  }) => <div className={clsx('flex flex-col gap-1.5', className)}>{children}</div>
+
+  const FormRow = ({ children }: { children: React.ReactNode }) => (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{children}</div>
+  )
+
+  const Select = ({
+    value,
+    onChange,
+    children,
+    className,
+  }: {
+    value: string
+    onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void
+    children: React.ReactNode
+    className?: string
+  }) => (
+    <div className="relative">
+      <select
+        className={`${formControlBase} cursor-pointer appearance-none pr-7 ${className}`}
+        value={value}
+        onChange={onChange}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={16}
+        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white/80"
+      />
+    </div>
+  )
 
   return (
-    <div className="customize-view">
-      <div className="settings-container">
-        {/* AI Profile & Behavior Section */}
-        <div className="settings-section">
-          <div className="section-title">
-            <span>AI Profile & Behavior</span>
-          </div>
-
-          <div className="form-grid">
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">
-                  Profile Type
-                  <span className="current-selection">{currentProfile?.name || 'Unknown'}</span>
+    <div className="select-none p-3 font-sans">
+      <div className="grid gap-3 pb-5">
+        <Section title="AI Profile & Behavior">
+          <div className="grid gap-3">
+            <FormRow>
+              <FormGroup>
+                <label className={formLabelBase}>
+                  Profile Type{' '}
+                  <span className={currentSelectionBadge}>✓ {currentProfile?.name}</span>
                 </label>
-                <select className="form-control" value={selectedProfile} onChange={handleProfileSelect}>
-                  {profiles.map(profile => (
-                    <option key={profile.value} value={profile.value}>
-                      {profile.name}
+                <Select value={selectedProfile} onChange={handleProfileSelect}>
+                  {profiles.map(p => (
+                    <option key={p.value} value={p.value}>
+                      {p.name}
                     </option>
                   ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="form-group full-width">
-              <label className="form-label">Custom AI Instructions</label>
+                </Select>
+              </FormGroup>
+            </FormRow>
+            <FormGroup className="col-span-full">
+              <label className={formLabelBase}>Custom AI Instructions</label>
               <textarea
-                className="form-control"
-                placeholder={`Add specific instructions for how you want the AI to behave during ${currentProfile?.name || 'this interaction'}...`}
+                className={`${formControlBase} min-h-[60px] resize-y leading-snug placeholder:text-[rgba(255,255,255,0.4)]`}
+                placeholder={`Add specific instructions for how you want the AI to behave...`}
                 defaultValue={localStorage.getItem('customPrompt') || ''}
                 rows={4}
                 onChange={handleCustomPromptInput}
               />
-              <div className="form-description">
-                Personalize the AI's behavior with specific instructions that will be added to the{' '}
-                {currentProfile?.name || 'selected profile'} base prompts
+              <div className={formDescriptionBase}>
+                Personalize behavior for the {currentProfile?.name || 'selected profile'}.
               </div>
-            </div>
+            </FormGroup>
           </div>
-        </div>
+        </Section>
 
-        {/* Language & Audio Section */}
-        <div className="settings-section">
-          <div className="section-title">
-            <span>Language & Audio</span>
-          </div>
-
-          <div className="form-grid">
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">
-                  Speech Language
-                  <span className="current-selection">{currentLanguage?.name || 'Unknown'}</span>
-                </label>
-                <select className="form-control" value={selectedLanguage} onChange={handleLanguageSelect}>
-                  {languages.map(language => (
-                    <option key={language.value} value={language.value}>
-                      {language.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="form-description">Language for speech recognition and AI responses</div>
+        <Section title="Language & Audio">
+          <FormRow>
+            <FormGroup>
+              <label className={formLabelBase}>
+                Speech Language{' '}
+                <span className={currentSelectionBadge}>✓ {currentLanguage?.name}</span>
+              </label>
+              <Select value={selectedLanguage} onChange={handleLanguageSelect}>
+                {languages.map(l => (
+                  <option key={l.value} value={l.value}>
+                    {l.name}
+                  </option>
+                ))}
+              </Select>
+              <div className={formDescriptionBase}>
+                Language for speech recognition and AI responses.
               </div>
-            </div>
-          </div>
-        </div>
+            </FormGroup>
+          </FormRow>
+        </Section>
 
-        {/* Interface Layout Section */}
-        <div className="settings-section">
-          <div className="section-title">
-            <span>Interface Layout</span>
-          </div>
-
-          <div className="form-grid">
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">
-                  Layout Mode
-                  <span className="current-selection">{layoutMode === 'compact' ? 'Compact' : 'Normal'}</span>
+        <Section title="Interface Layout">
+          <div className="grid gap-3">
+            <FormRow>
+              <FormGroup>
+                <label className={formLabelBase}>
+                  Layout Mode{' '}
+                  <span className={currentSelectionBadge}>
+                    {layoutMode.charAt(0).toUpperCase() + layoutMode.slice(1)}
+                  </span>
                 </label>
-                <select className="form-control" value={layoutMode} onChange={handleLayoutModeSelect}>
+                <Select value={layoutMode} onChange={handleLayoutModeSelect}>
                   <option value="normal">Normal</option>
                   <option value="compact">Compact</option>
-                </select>
-                <div className="form-description">
+                </Select>
+                <div className={formDescriptionBase}>
                   {layoutMode === 'compact'
-                    ? 'Smaller window size with reduced padding and font sizes for minimal screen footprint'
-                    : 'Standard layout with comfortable spacing and font sizes'}
+                    ? 'Minimal UI for smaller footprint.'
+                    : 'Standard UI with comfortable spacing.'}
                 </div>
+              </FormGroup>
+            </FormRow>
+            <FormGroup className="col-span-full">
+              <div className="flex items-center justify-between">
+                <label className={formLabelBase}>Background Transparency</label>
+                <span className={`${currentSelectionBadge} font-mono`}>
+                  {Math.round(backgroundTransparency * 100)}%
+                </span>
               </div>
-            </div>
-
-            <div className="form-group full-width">
-              <div className="slider-container">
-                <div className="slider-header">
-                  <label className="form-label">Background Transparency</label>
-                  <span className="slider-value">{Math.round(backgroundTransparency * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  className="slider-input"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={backgroundTransparency}
-                  onChange={(e) => setBackgroundTransparency(parseFloat(e.target.value))}
-                />
-                <div className="slider-labels">
-                  <span>Transparent</span>
-                  <span>Opaque</span>
-                </div>
-                <div className="form-description">
-                  Adjust the transparency of the interface background elements
-                </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={backgroundTransparency}
+                onChange={e => setBackgroundTransparency(parseFloat(e.target.value))}
+                className="slider-input h-1 w-full cursor-pointer appearance-none rounded-sm border border-[--input-border] bg-[--input-background] outline-none"
+              />
+              <div className="flex justify-between text-[10px] text-[--description-color]">
+                <small>Transparent</small>
+                <small>Opaque</small>
               </div>
-            </div>
-
-            <div className="form-group full-width">
-              <div className="slider-container">
-                <div className="slider-header">
-                  <label className="form-label">Response Font Size</label>
-                  <span className="slider-value">{fontSize}px</span>
-                </div>
-                <input
-                  type="range"
-                  className="slider-input"
-                  min="12"
-                  max="32"
-                  step="1"
-                  value={fontSize}
-                  onChange={(e) => setFontSize(parseInt(e.target.value, 10))}
-                />
-                <div className="slider-labels">
-                  <span>12px</span>
-                  <span>32px</span>
-                </div>
-                <div className="form-description">
-                  Adjust the font size of AI response text in the assistant view
-                </div>
+            </FormGroup>
+            <FormGroup className="col-span-full">
+              <div className="flex items-center justify-between">
+                <label className={formLabelBase}>Response Font Size</label>
+                <span className={`${currentSelectionBadge} font-mono`}>{fontSize}px</span>
               </div>
-            </div>
+              <input
+                type="range"
+                min="12"
+                max="32"
+                step="1"
+                value={fontSize}
+                onChange={e => setFontSize(parseInt(e.target.value, 10))}
+                className="slider-input h-1 w-full cursor-pointer appearance-none rounded-sm border border-[--input-border] bg-[--input-background] outline-none"
+              />
+              <div className="flex justify-between text-[10px] text-[--description-color]">
+                <small>12px</small>
+                <small>32px</small>
+              </div>
+            </FormGroup>
           </div>
-        </div>
+        </Section>
 
-        {/* Screen Capture Section */}
-        <div className="settings-section">
-          <div className="section-title">
-            <span>Screen Capture Settings</span>
-          </div>
-
-          <div className="form-grid">
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">
-                  Capture Interval
-                  <span className="current-selection">
-                    {selectedScreenshotInterval === 'manual' ? 'Manual' : selectedScreenshotInterval + 's'}
-                  </span>
-                </label>
-                <select className="form-control" value={selectedScreenshotInterval} onChange={handleScreenshotIntervalSelect}>
-                  <option value="manual">Manual (On demand)</option>
-                  <option value="1">Every 1 second</option>
-                  <option value="2">Every 2 seconds</option>
-                  <option value="5">Every 5 seconds</option>
-                  <option value="10">Every 10 seconds</option>
-                </select>
-                <div className="form-description">
+        <Section title="Screen Capture Settings">
+          <FormRow>
+            <FormGroup>
+              <label className={formLabelBase}>
+                Capture Interval{' '}
+                <span className={currentSelectionBadge}>
                   {selectedScreenshotInterval === 'manual'
-                    ? 'Screenshots will only be taken when you use the "Ask Next Step" shortcut'
-                    : 'Automatic screenshots will be taken at the specified interval'}
-                </div>
-              </div>
+                    ? 'Manual'
+                    : `${selectedScreenshotInterval}s`}
+                </span>
+              </label>
+              <Select value={selectedScreenshotInterval} onChange={handleScreenshotIntervalSelect}>
+                <option value="manual">Manual (On demand)</option>
+                <option value="1">Every 1 second</option>
+                <option value="2">Every 2 seconds</option>
+                <option value="5">Every 5 seconds</option>
+                <option value="10">Every 10 seconds</option>
+              </Select>
+            </FormGroup>
+            <FormGroup>
+              <label className={formLabelBase}>
+                Image Quality{' '}
+                <span className={currentSelectionBadge}>
+                  {selectedImageQuality.charAt(0).toUpperCase() + selectedImageQuality.slice(1)}
+                </span>
+              </label>
+              <Select value={selectedImageQuality} onChange={handleImageQualitySelect}>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </Select>
+            </FormGroup>
+          </FormRow>
+        </Section>
 
-              <div className="form-group">
-                <label className="form-label">
-                  Image Quality
-                  <span className="current-selection">
-                    {selectedImageQuality.charAt(0).toUpperCase() + selectedImageQuality.slice(1)}
-                  </span>
-                </label>
-                <select className="form-control" value={selectedImageQuality} onChange={handleImageQualitySelect}>
-                  <option value="high">High Quality</option>
-                  <option value="medium">Medium Quality</option>
-                  <option value="low">Low Quality</option>
-                </select>
-                <div className="form-description">
-                  {selectedImageQuality === 'high'
-                    ? 'Best quality, uses more tokens'
-                    : selectedImageQuality === 'medium'
-                      ? 'Balanced quality and token usage'
-                      : 'Lower quality, uses fewer tokens'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Keyboard Shortcuts Section */}
-        <div className="settings-section">
-          <div className="section-title">
-            <span>Keyboard Shortcuts</span>
-          </div>
-
-          <table className="keybinds-table">
-            <thead>
-              <tr>
-                <th>Action</th>
-                <th>Shortcut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {getKeybindActions().map(action => (
-                <tr key={action.key}>
-                  <td>
-                    <div className="action-name">{action.name}</div>
-                    <div className="action-description">{action.description}</div>
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="form-control keybind-input"
-                      value={keybinds[action.key]}
-                      placeholder="Press keys..."
-                      data-action={action.key}
-                      onKeyDown={handleKeybindInput}
-                      onFocus={handleKeybindFocus}
-                      readOnly
-                    />
+        <Section title="Keyboard Shortcuts">
+          <div className="w-full overflow-hidden rounded">
+            <table className="w-full border-collapse">
+              <thead className="bg-[rgba(255,255,255,0.04)]">
+                <tr>
+                  <th className="border-b border-[--table-border] p-2 text-left text-[11px] font-semibold uppercase tracking-wider text-[--label-color]">
+                    Action
+                  </th>
+                  <th className="border-b border-[--table-border] p-2 text-left text-[11px] font-semibold uppercase tracking-wider text-[--label-color]">
+                    Shortcut
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {keybindActions.map(action => (
+                  <tr key={action.key} className="hover:bg-[rgba(255,255,255,0.02)]">
+                    <td className="border-b border-[--table-border] p-2 align-middle">
+                      <div className="text-xs font-medium text-[--text-color]">{action.name}</div>
+                      <div className="mt-px text-[10px] text-[--description-color]">
+                        {action.description}
+                      </div>
+                    </td>
+                    <td className="border-b border-[--table-border] p-2 align-middle">
+                      <input
+                        type="text"
+                        className={`${formControlBase} m-0 min-w-28 p-1 text-center text-xs`}
+                        value={keybinds[action.key]}
+                        placeholder="Press keys..."
+                        data-action={action.key}
+                        onKeyDown={handleKeybindInput}
+                        onFocus={handleKeybindFocus}
+                        readOnly
+                      />
+                    </td>
+                  </tr>
+                ))}
+                <tr className="border-t border-[--table-border]">
+                  <td colSpan={2} className="pt-3 pb-2">
+                    <button
+                      className="rounded px-2 py-1 text-xs text-[--label-color] outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-blue-500"
+                      onClick={resetKeybinds}
+                    >
+                      Reset to Defaults
+                    </button>
                   </td>
                 </tr>
-              ))}
-              <tr className="table-reset-row">
-                <td colSpan={2}>
-                  <button className="reset-keybinds-button" onClick={resetKeybinds}>
-                    Reset to Defaults
-                  </button>
-                  <div className="form-description" style={{ marginTop: '8px' }}>
-                    Restore all keyboard shortcuts to their default values
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Google Search Section */}
-        <div className="settings-section">
-          <div className="section-title">
-            <span>Google Search</span>
+              </tbody>
+            </table>
           </div>
+        </Section>
 
-          <div className="form-grid">
-            <div className="checkbox-group">
+        <Section title="Google Search">
+          <div className="rounded border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-2">
+            <label htmlFor="google-search-enabled" className={checkboxLabelBase}>
               <input
                 type="checkbox"
-                className="checkbox-input"
                 id="google-search-enabled"
                 checked={googleSearchEnabled}
-                onChange={(e) => setGoogleSearchEnabled(e.target.checked)}
+                onChange={e => setGoogleSearchEnabled(e.target.checked)}
+                className={checkboxInputBase}
               />
-              <label htmlFor="google-search-enabled" className="checkbox-label">
-                Enable Google Search
-              </label>
-            </div>
-            <div className="form-description" style={{ marginLeft: '24px', marginTop: '-8px' }}>
-              Allow the AI to search Google for up-to-date information and facts during conversations
-              <br />
-              <strong>Note:</strong> Changes take effect when starting a new AI session
-            </div>
+              Enable Google Search
+            </label>
           </div>
-        </div>
-
-        {/* Advanced Mode Section */}
-        <div className="settings-section danger-section">
-          <div className="section-title danger">
-            <span>⚠️ Advanced Mode</span>
+          <div className={`${formDescriptionBase} pl-7`}>
+            Allow the AI to search Google for up-to-date information.
           </div>
+        </Section>
 
-          <div className="form-grid">
-            <div className="checkbox-group">
+        <Section title="⚠️ Advanced Mode" isDanger>
+          <div className="rounded border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-2">
+            <label htmlFor="advanced-mode" className={checkboxLabelBase}>
               <input
                 type="checkbox"
-                className="checkbox-input"
                 id="advanced-mode"
                 checked={advancedMode}
-                onChange={(e) => setAdvancedMode(e.target.checked)}
+                onChange={e => setAdvancedMode(e.target.checked)}
+                className={checkboxInputBase}
               />
-              <label htmlFor="advanced-mode" className="checkbox-label">
-                Enable Advanced Mode
-              </label>
-            </div>
-            <div className="form-description" style={{ marginLeft: '24px', marginTop: '-8px' }}>
-              Unlock experimental features, developer tools, and advanced configuration options
-              <br />
-              <strong>Note:</strong> Advanced mode adds a new icon to the main navigation bar
-            </div>
+              Enable Advanced Mode
+            </label>
           </div>
-        </div>
+          <div className={`${formDescriptionBase} pl-7`}>
+            Unlocks experimental features and developer tools.
+          </div>
+        </Section>
 
-        <div className="settings-note">
-          💡 Settings are automatically saved as you change them. Changes will take effect immediately or on the next session start.
+        <div className="mt-2 text-center text-[10px] italic text-[--note-color]">
+          💡 Settings are automatically saved as you change them.
         </div>
       </div>
     </div>
-  );
+  )
 }

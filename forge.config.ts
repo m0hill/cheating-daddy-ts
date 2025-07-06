@@ -1,12 +1,12 @@
-import type { ForgeConfig } from '@electron-forge/shared-types';
-import { MakerSquirrel } from '@electron-forge/maker-squirrel';
-import { MakerZIP } from '@electron-forge/maker-zip';
-import { MakerDeb } from '@electron-forge/maker-deb';
-import { MakerRpm } from '@electron-forge/maker-rpm';
-import { MakerDMG } from '@electron-forge/maker-dmg';
-import { VitePlugin } from '@electron-forge/plugin-vite';
-import { FusesPlugin } from '@electron-forge/plugin-fuses';
-import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { FuseV1Options, FuseVersion } from '@electron/fuses'
+import { MakerDeb } from '@electron-forge/maker-deb'
+import { MakerDMG } from '@electron-forge/maker-dmg'
+import { MakerRpm } from '@electron-forge/maker-rpm'
+import { MakerSquirrel } from '@electron-forge/maker-squirrel'
+import { MakerZIP } from '@electron-forge/maker-zip'
+import { FusesPlugin } from '@electron-forge/plugin-fuses'
+import { VitePlugin } from '@electron-forge/plugin-vite'
+import type { ForgeConfig } from '@electron-forge/shared-types'
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -25,11 +25,14 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
-      name: 'cheating-daddy'
+      name: 'cheating-daddy',
     }),
-    new MakerDMG({
-      name: 'Cheating Daddy',
-    }, ['darwin']),
+    new MakerDMG(
+      {
+        name: 'Cheating Daddy',
+      },
+      ['darwin']
+    ),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),
@@ -68,6 +71,6 @@ const config: ForgeConfig = {
       [FuseV1Options.OnlyLoadAppFromAsar]: true,
     }),
   ],
-};
+}
 
-export default config;
+export default config

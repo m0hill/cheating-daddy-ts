@@ -1,16 +1,17 @@
-import { useEffect } from 'react';
-import { useAppStore } from './stores/appStore';
-import { useIpc, useWindowResize } from './hooks';
-import AppHeader from './components/AppHeader';
-import MainView from './components/views/MainView';
-import CustomizeView from './components/views/CustomizeView';
-import HelpView from './components/views/HelpView';
-import HistoryView from './components/views/HistoryView';
-import AdvancedView from './components/views/AdvancedView';
-import AssistantView from './components/views/AssistantView';
-import OnboardingView from './components/views/OnboardingView';
-import type { MainViewProps, OnboardingViewProps } from '@shared/types';
-import './styles/App.css';
+import type { MainViewProps, OnboardingViewProps } from '@shared/types'
+import clsx from 'clsx'
+import { useEffect } from 'react'
+import AppHeader from './components/AppHeader'
+import AdvancedView from './components/views/AdvancedView'
+import AssistantView from './components/views/AssistantView'
+import CustomizeView from './components/views/CustomizeView'
+import HelpView from './components/views/HelpView'
+import HistoryView from './components/views/HistoryView'
+import MainView from './components/views/MainView'
+import OnboardingView from './components/views/OnboardingView'
+import { useIpc, useWindowResize } from './hooks'
+import { useAppStore } from './stores/appStore'
+import './index.css'
 
 function App() {
   const {
@@ -24,93 +25,93 @@ function App() {
     clearResponses,
     layoutMode,
     selectedProfile,
-    selectedLanguage
-  } = useAppStore();
+    selectedLanguage,
+  } = useAppStore()
 
-  const electronAPI = useIpc();
-  const { resizeForCurrentView } = useWindowResize();
+  const electronAPI = useIpc()
+  const { resizeForCurrentView } = useWindowResize()
 
   // Set up IPC event listeners
   useEffect(() => {
-    const unsubscribeStatus = electronAPI.on.updateStatus(setStatusText);
-    const unsubscribeResponse = electronAPI.on.updateResponse(addResponse);
-    const unsubscribeClickThrough = electronAPI.on.clickThroughToggled(setIsClickThrough);
+    const unsubscribeStatus = electronAPI.on.updateStatus(setStatusText)
+    const unsubscribeResponse = electronAPI.on.updateResponse(addResponse)
+    const unsubscribeClickThrough = electronAPI.on.clickThroughToggled(setIsClickThrough)
 
     return () => {
-      unsubscribeStatus();
-      unsubscribeResponse();
-      unsubscribeClickThrough();
-    };
-  }, [electronAPI.on, setStatusText, addResponse, setIsClickThrough]);
+      unsubscribeStatus()
+      unsubscribeResponse()
+      unsubscribeClickThrough()
+    }
+  }, [electronAPI.on, setStatusText, addResponse, setIsClickThrough])
 
   // Apply layout mode on mount
   useEffect(() => {
     if (layoutMode === 'compact') {
-      document.documentElement.classList.add('compact-layout');
+      document.documentElement.classList.add('compact-layout')
     } else {
-      document.documentElement.classList.remove('compact-layout');
+      document.documentElement.classList.remove('compact-layout')
     }
-  }, [layoutMode]);
+  }, [layoutMode])
 
   // Notify main process of view changes and resize
   useEffect(() => {
-    electronAPI.send.viewChanged(currentView);
-    resizeForCurrentView();
-  }, [currentView, electronAPI.send, resizeForCurrentView]);
+    electronAPI.send.viewChanged(currentView)
+    resizeForCurrentView()
+  }, [currentView, electronAPI.send, resizeForCurrentView])
 
   // Check for onboarding completion
   useEffect(() => {
-    const onboardingCompleted = localStorage.getItem('onboardingCompleted');
+    const onboardingCompleted = localStorage.getItem('onboardingCompleted')
     if (!onboardingCompleted && currentView !== 'onboarding') {
-      setCurrentView('onboarding');
+      setCurrentView('onboarding')
     }
-  }, [currentView, setCurrentView]);
+  }, [currentView, setCurrentView])
 
   // Header event handlers
-  const handleCustomizeClick = () => setCurrentView('customize');
-  const handleHelpClick = () => setCurrentView('help');
-  const handleHistoryClick = () => setCurrentView('history');
-  const handleAdvancedClick = () => setCurrentView('advanced');
-  const handleBackClick = () => setCurrentView('main');
+  const handleCustomizeClick = () => setCurrentView('customize')
+  const handleHelpClick = () => setCurrentView('help')
+  const handleHistoryClick = () => setCurrentView('history')
+  const handleAdvancedClick = () => setCurrentView('advanced')
+  const handleBackClick = () => setCurrentView('main')
 
   const handleClose = async () => {
     if (['customize', 'help', 'history', 'advanced'].includes(currentView)) {
-      setCurrentView('main');
+      setCurrentView('main')
     } else if (currentView === 'assistant') {
       try {
-        await electronAPI.invoke.closeSession();
-        setSessionActive(false);
-        setCurrentView('main');
-        clearResponses();
-        setStartTime(null);
-        console.log('Session closed');
+        await electronAPI.invoke.closeSession()
+        setSessionActive(false)
+        setCurrentView('main')
+        clearResponses()
+        setStartTime(null)
+        console.log('Session closed')
       } catch (error) {
-        console.error('Error closing session:', error);
+        console.error('Error closing session:', error)
       }
     } else {
       try {
-        await electronAPI.invoke.quitApplication();
+        await electronAPI.invoke.quitApplication()
       } catch (error) {
-        console.error('Error quitting application:', error);
+        console.error('Error quitting application:', error)
       }
     }
-  };
+  }
 
   const handleHideToggle = async () => {
     try {
-      await electronAPI.invoke.toggleWindowVisibility();
+      await electronAPI.invoke.toggleWindowVisibility()
     } catch (error) {
-      console.error('Error toggling window visibility:', error);
+      console.error('Error toggling window visibility:', error)
     }
-  };
+  }
 
   // Main view event handlers
   const handleStart: MainViewProps['onStart'] = async () => {
-    const apiKey = localStorage.getItem('apiKey')?.trim();
+    const apiKey = localStorage.getItem('apiKey')?.trim()
     if (!apiKey) {
       // The error state will be triggered within the MainView component
-      console.error('API Key is missing.');
-      return;
+      console.error('API Key is missing.')
+      return
     }
 
     try {
@@ -119,67 +120,70 @@ function App() {
         localStorage.getItem('customPrompt') || '',
         selectedProfile,
         selectedLanguage
-      );
+      )
       if (success) {
-        clearResponses();
-        setStartTime(Date.now());
-        setCurrentView('assistant');
-        setSessionActive(true);
+        clearResponses()
+        setStartTime(Date.now())
+        setCurrentView('assistant')
+        setSessionActive(true)
       } else {
-        setStatusText('Failed to initialize AI session');
+        setStatusText('Failed to initialize AI session')
       }
     } catch (error) {
-      console.error('Error starting session:', error);
-      setStatusText('Error starting session');
+      console.error('Error starting session:', error)
+      setStatusText('Error starting session')
     }
-  };
+  }
 
   const handleAPIKeyHelp: MainViewProps['onAPIKeyHelp'] = async () => {
     try {
-      await electronAPI.invoke.openExternal('https://cheatingdaddy.com/help/api-key');
+      await electronAPI.invoke.openExternal('https://cheatingdaddy.com/help/api-key')
     } catch (error) {
-      console.error('Error opening external URL:', error);
+      console.error('Error opening external URL:', error)
     }
-  };
+  }
 
   // Onboarding event handler
   const handleOnboardingComplete: OnboardingViewProps['onComplete'] = () => {
-    localStorage.setItem('onboardingCompleted', 'true');
-    setCurrentView('main');
-  };
+    localStorage.setItem('onboardingCompleted', 'true')
+    setCurrentView('main')
+  }
 
   // Render current view
   const renderCurrentView = () => {
     switch (currentView) {
       case 'onboarding':
-        return <OnboardingView onComplete={handleOnboardingComplete} onClose={handleClose} />;
+        return <OnboardingView onComplete={handleOnboardingComplete} onClose={handleClose} />
       case 'main':
-        return <MainView onStart={handleStart} onAPIKeyHelp={handleAPIKeyHelp} />;
+        return <MainView onStart={handleStart} onAPIKeyHelp={handleAPIKeyHelp} />
       case 'customize':
-        return <CustomizeView />;
+        return <CustomizeView />
       case 'help':
-        return <HelpView />;
+        return <HelpView />
       case 'history':
-        return <HistoryView />;
+        return <HistoryView />
       case 'advanced':
-        return <AdvancedView />;
+        return <AdvancedView />
       case 'assistant':
-        return <AssistantView />;
+        return <AssistantView />
       default:
-        return <MainView onStart={handleStart} onAPIKeyHelp={handleAPIKeyHelp} />;
+        return <MainView onStart={handleStart} onAPIKeyHelp={handleAPIKeyHelp} />
     }
-  };
+  }
 
-  const getMainContentClass = () => {
-    const baseClass = 'main-content';
-    if (currentView === 'assistant') return `${baseClass} assistant-view`;
-    if (currentView === 'onboarding') return `${baseClass} onboarding-view`;
-    return `${baseClass} with-border`;
-  };
+  const mainContentClass = clsx(
+    'flex-1 overflow-y-auto bg-[--main-content-background] transition-all duration-150 ease-out',
+    {
+      'p-2.5 [margin-top:var(--main-content-margin-top)] [border-radius:var(--content-border-radius)]':
+        currentView !== 'onboarding',
+      'border border-[--border-color]': currentView !== 'assistant' && currentView !== 'onboarding',
+      'p-0 border-none bg-transparent': currentView === 'onboarding',
+    }
+  )
 
   return (
-    <div className="window-container">
-      <div className="container">
+    <div className="h-screen overflow-hidden rounded-lg">
+      <div className="flex h-full flex-col">
         <AppHeader
           onCustomizeClick={handleCustomizeClick}
           onHelpClick={handleHelpClick}
@@ -189,12 +193,12 @@ function App() {
           onBackClick={handleBackClick}
           onHideToggleClick={handleHideToggle}
         />
-        <div className={getMainContentClass()}>
-          <div className="view-container fade-in">{renderCurrentView()}</div>
+        <div className={mainContentClass}>
+          <div className="h-full animate-[fadeIn_0.15s_ease-out]">{renderCurrentView()}</div>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App

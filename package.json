@@ -1,23 +1,28 @@
 {
   "name": "cheating-daddy-ts",
   "description": "A TypeScript/React/Tailwind/Vite fork of Cheating Daddy by sohzm",
+  "version": "0.1.0",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
+    "package": "pnpm run build:css && electron-forge package",
+    "make": "pnpm run build:css && electron-forge make",
     "publish": "electron-forge publish",
     "lint": "pnpm dlx oxlint@latest",
-    "format": "biome check --write .",
+    "format": "biome format --write ./src",
     "type-check": "tsc --noEmit"
   },
   "license": "GPL-3.0",
   "dependencies": {
     "@google/genai": "^1.2.0",
+    "@tailwindcss/postcss": "^4.1.11",
     "clsx": "^2.1.0",
     "electron-squirrel-startup": "^1.0.1",
+    "lucide-react": "^0.525.0",
+    "postcss": "^8.5.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "tailwindcss": "^4.1.11",
     "zustand": "^4.4.7"
   },
   "devDependencies": {

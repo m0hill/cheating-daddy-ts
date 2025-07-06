@@ -1,11 +1,11 @@
-import type { ProfileType } from '@shared/types';
+import type { ProfileType } from '@shared/types'
 
 interface PromptParts {
-  intro: string;
-  formatRequirements: string;
-  searchUsage: string;
-  content: string;
-  outputInstructions: string;
+  intro: string
+  formatRequirements: string
+  searchUsage: string
+  content: string
+  outputInstructions: string
 }
 
 const profilePrompts: Record<ProfileType, PromptParts> = {
@@ -169,24 +169,39 @@ You: "That's smart business practice. While you're evaluating alternatives, I wa
     outputInstructions: `**OUTPUT INSTRUCTIONS:**
 Provide only the exact words to say in **markdown format**. Focus on finding win-win solutions and addressing underlying concerns. Keep responses **short and impactful**.`,
   },
-};
+}
 
-function buildSystemPrompt(promptParts: PromptParts, customPrompt = '', googleSearchEnabled = true): string {
-  const sections = [promptParts.intro, '\n\n', promptParts.formatRequirements];
+function buildSystemPrompt(
+  promptParts: PromptParts,
+  customPrompt = '',
+  googleSearchEnabled = true
+): string {
+  const sections = [promptParts.intro, '\n\n', promptParts.formatRequirements]
 
   // Only add search usage section if Google Search is enabled
   if (googleSearchEnabled) {
-    sections.push('\n\n', promptParts.searchUsage);
+    sections.push('\n\n', promptParts.searchUsage)
   }
 
-  sections.push('\n\n', promptParts.content, '\n\nUser-provided context\n-----\n', customPrompt, '\n-----\n\n', promptParts.outputInstructions);
+  sections.push(
+    '\n\n',
+    promptParts.content,
+    '\n\nUser-provided context\n-----\n',
+    customPrompt,
+    '\n-----\n\n',
+    promptParts.outputInstructions
+  )
 
-  return sections.join('');
+  return sections.join('')
 }
 
-export function getSystemPrompt(profile: ProfileType, customPrompt = '', googleSearchEnabled = true): string {
-  const promptParts = profilePrompts[profile] || profilePrompts.interview;
-  return buildSystemPrompt(promptParts, customPrompt, googleSearchEnabled);
+export function getSystemPrompt(
+  profile: ProfileType,
+  customPrompt = '',
+  googleSearchEnabled = true
+): string {
+  const promptParts = profilePrompts[profile] || profilePrompts.interview
+  return buildSystemPrompt(promptParts, customPrompt, googleSearchEnabled)
 }
 
-export { profilePrompts };
+export { profilePrompts }

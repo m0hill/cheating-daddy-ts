@@ -6,8 +6,7 @@
     "useIgnoreFile": false
   },
   "files": {
-    "ignoreUnknown": false,
-    "includes": ["!**/.vite", "!**/node_modules", "!**/public", "!**/assets"]
+    "ignoreUnknown": false
   },
   "formatter": {
     "enabled": true,
@@ -26,7 +25,9 @@
       "quoteStyle": "single",
       "trailingCommas": "es5",
       "semicolons": "asNeeded",
-      "arrowParentheses": "asNeeded"
+      "arrowParentheses": "asNeeded",
+      "bracketSameLine": false,
+      "jsxQuoteStyle": "double"
     }
   }
 }
