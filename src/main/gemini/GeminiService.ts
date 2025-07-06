@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from '@google/genai'
+import { GoogleGenAI, LiveServerMessage, Modality, Session, Tool } from '@google/genai'
 import type {
   AudioContent,
   ConversationTurn,
@@ -20,9 +20,17 @@ interface ReconnectionParams {
   language: string
 }
 
+interface GeminiErrorEvent {
+  message: string
+}
+
+interface GeminiCloseEvent {
+  reason: string
+}
+
 const createGeminiService = () => {
   // State variables
-  let currentSession: any = null
+  let currentSession: Session | null = null
   let currentSessionId: string | null = null
   let currentTranscription = ''
   let conversationHistory: ConversationTurn[] = []
@@ -35,7 +43,7 @@ const createGeminiService = () => {
   let lastSessionParams: ReconnectionParams | null = null
 
   // Internal functions (formerly private methods)
-  const sendToRenderer = (channel: string, data: any): void => {
+  const sendToRenderer = (channel: string, data: unknown): void => {
     const windows = BrowserWindow.getAllWindows()
     if (windows.length > 0) {
       windows[0].webContents.send(channel, data)
@@ -105,8 +113,8 @@ const createGeminiService = () => {
     }
   }
 
-  const getEnabledTools = async (): Promise<any[]> => {
-    const tools: any[] = []
+  const getEnabledTools = async (): Promise<Tool[]> => {
+    const tools: Tool[] = []
 
     // Check if Google Search is enabled (default: true)
     const googleSearchEnabled = await getStoredSetting('googleSearchEnabled', 'true')
@@ -149,8 +157,8 @@ const createGeminiService = () => {
         return value
       }
     } catch (error) {
-      if (error && typeof error === 'object' && 'message' in error) {
-        console.error('Error getting stored setting for', key, ':', (error as any).message)
+      if (error instanceof Error) {
+        console.error('Error getting stored setting for', key, ':', error.message)
       } else {
         console.error('Error getting stored setting for', key, ':', error)
       }
@@ -240,10 +248,10 @@ const createGeminiService = () => {
     profile = 'interview',
     language = 'en-US',
     isReconnection = false
-  ): Promise<any> => {
+  ): Promise<Session | null> => {
     if (isInitializingSession) {
       console.log('Session initialization already in progress')
-      return false
+      return null
     }
 
     isInitializingSession = true
@@ -283,7 +291,7 @@ const createGeminiService = () => {
           onopen: () => {
             sendToRenderer('update-status', 'Live session connected')
           },
-          onmessage: (message: any) => {
+          onmessage: (message: LiveServerMessage) => {
             console.log('----------------', message)
 
             // Handle transcription input
@@ -317,7 +325,7 @@ const createGeminiService = () => {
               sendToRenderer('update-status', 'Listening...')
             }
           },
-          onerror: (e: any) => {
+          onerror: (e: GeminiErrorEvent) => {
             console.debug('Error:', e.message)
 
             // Check if the error is related to invalid API key
@@ -338,7 +346,7 @@ const createGeminiService = () => {
 
             sendToRenderer('update-status', 'Error: ' + e.message)
           },
-          onclose: (e: any) => {
+          onclose: (e: GeminiCloseEvent) => {
             console.debug('Session closed:', e.reason)
 
             // Check if the session closed due to invalid API key
@@ -459,7 +467,7 @@ const createGeminiService = () => {
 
     let audioBuffer = Buffer.alloc(0)
 
-    systemAudioProc.stdout?.on('data', data => {
+    systemAudioProc.stdout?.on('data', (data: Buffer) => {
       audioBuffer = Buffer.concat([audioBuffer, data])
 
       while (audioBuffer.length >= CHUNK_SIZE) {
@@ -482,7 +490,7 @@ const createGeminiService = () => {
       }
     })
 
-    systemAudioProc.stderr?.on('data', data => {
+    systemAudioProc.stderr?.on('data', (data: Buffer) => {
       console.error('SystemAudioDump stderr:', data.toString())
     })
 
