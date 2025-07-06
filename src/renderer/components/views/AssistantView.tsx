@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFontSize, useIpc, useMediaCapture } from '../../hooks'
 import { useAppStore } from '../../stores/appStore'
 
-export default function AssistantView() {
+const AssistantView = () => {
   const { responses, currentResponseIndex, selectedProfile, setCurrentResponseIndex } =
     useAppStore()
 
@@ -215,3 +215,5 @@ export default function AssistantView() {
     </div>
   )
 }
+
+export default AssistantView

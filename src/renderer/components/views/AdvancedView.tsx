@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, LoaderCircle, Timer, Trash2, XCircle } fro
 import { useEffect, useState } from 'react'
 import { useRateLimit, useWindowResize } from '../../hooks'
 
-export default function AdvancedView() {
+const AdvancedView = () => {
   const { resizeForCurrentView } = useWindowResize()
   const {
     throttleTokens,
@@ -249,3 +249,5 @@ export default function AdvancedView() {
     </div>
   )
 }
+
+export default AdvancedView

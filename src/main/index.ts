@@ -1,182 +1,127 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import started from 'electron-squirrel-startup'
-import { GeminiService } from './gemini/GeminiService'
-import { WindowManager } from './window/WindowManager'
+import { geminiService } from './gemini/GeminiService'
+import { createWindowManager } from './window/WindowManager'
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
   process.exit(0)
 }
 
-class Application {
-  private windowManager: WindowManager | null = null
-  private geminiService: GeminiService | null = null
+// Keep a reference to the window manager to prevent it from being garbage collected
+let windowManagerInstance: ReturnType<typeof createWindowManager> | null = null
 
-  constructor() {
-    this.setupAppEventListeners()
-  }
-
-  private setupAppEventListeners(): void {
-    app.whenReady().then(() => {
-      this.initialize()
-    })
-
-    app.on('window-all-closed', () => {
-      this.cleanup()
-      if (process.platform !== 'darwin') {
-        app.quit()
-      }
-    })
-
-    app.on('before-quit', () => {
-      this.cleanup()
-    })
-
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        this.createMainWindow()
-      }
-    })
-  }
-
-  private async initialize(): Promise<void> {
+const setupGeneralIpcHandlers = (manager: ReturnType<typeof createWindowManager>): void => {
+  ipcMain.handle('quit-application', async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Initialize services
-      this.geminiService = new GeminiService()
-      this.windowManager = new WindowManager(this.geminiService)
-
-      // Create main window
-      await this.createMainWindow()
-
-      // Setup IPC handlers
-      this.setupIpcHandlers()
-
-      console.log('Application initialized successfully')
-    } catch (error) {
-      console.error('Failed to initialize application:', error)
+      cleanup()
       app.quit()
-    }
-  }
-
-  private async createMainWindow(): Promise<void> {
-    if (!this.windowManager) {
-      throw new Error('WindowManager not initialized')
-    }
-
-    try {
-      await this.windowManager.createMainWindow()
-      console.log('Main window created')
+      return { success: true }
     } catch (error) {
-      console.error('Failed to create main window:', error)
-      throw error
+      console.error('Error quitting application:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }
     }
-  }
+  })
 
-  private setupIpcHandlers(): void {
-    if (!this.geminiService || !this.windowManager) {
-      throw new Error('Services not initialized')
-    }
-
-    // Setup Gemini IPC handlers
-    this.geminiService.setupIpcHandlers()
-
-    // Setup general application IPC handlers
-    this.setupGeneralIpcHandlers()
-
-    // Setup window management IPC handlers
-    this.windowManager.setupIpcHandlers()
-  }
-
-  private setupGeneralIpcHandlers(): void {
-    // Application control handlers
-    ipcMain.handle('quit-application', async (): Promise<{ success: boolean; error?: string }> => {
+  ipcMain.handle(
+    'open-external',
+    async (_, url: string): Promise<{ success: boolean; error?: string }> => {
       try {
-        this.cleanup()
-        app.quit()
+        await shell.openExternal(url)
         return { success: true }
       } catch (error) {
-        console.error('Error quitting application:', error)
+        console.error('Error opening external URL:', error)
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : 'Failed to open URL',
         }
       }
-    })
-
-    // External link handler
-    ipcMain.handle(
-      'open-external',
-      async (_, url: string): Promise<{ success: boolean; error?: string }> => {
-        try {
-          await shell.openExternal(url)
-          return { success: true }
-        } catch (error) {
-          console.error('Error opening external URL:', error)
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to open URL',
-          }
-        }
-      }
-    )
-
-    // Keybinds update handler
-    ipcMain.on('update-keybinds', (_, newKeybinds: any) => {
-      if (this.windowManager) {
-        this.windowManager.updateGlobalShortcuts(newKeybinds)
-      }
-    })
-
-    // Content protection handler
-    ipcMain.handle(
-      'update-content-protection',
-      async (): Promise<{ success: boolean; error?: string }> => {
-        try {
-          if (this.windowManager) {
-            const contentProtection = await this.windowManager
-              .getMainWindow()
-              ?.webContents.executeJavaScript(
-                'window.electronAPI ? localStorage.getItem("contentProtection") !== "false" : true'
-              )
-            this.windowManager.getMainWindow()?.setContentProtection(contentProtection)
-            console.log('Content protection updated:', contentProtection)
-          }
-          return { success: true }
-        } catch (error) {
-          console.error('Error updating content protection:', error)
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to update content protection',
-          }
-        }
-      }
-    )
-  }
-
-  private cleanup(): void {
-    try {
-      // Stop any audio capture
-      this.geminiService?.stopMacOSAudioCapture()
-
-      // Cleanup window manager
-      this.windowManager?.cleanup()
-
-      console.log('Application cleanup completed')
-    } catch (error) {
-      console.error('Error during cleanup:', error)
     }
-  }
+  )
 
-  // Public method to send messages to renderer
-  public sendToRenderer(channel: string, data: any): void {
-    if (this.windowManager) {
-      this.windowManager.sendToRenderer(channel, data)
+  ipcMain.on('update-keybinds', (_, newKeybinds: any) => {
+    manager.updateGlobalShortcuts(newKeybinds)
+  })
+
+  ipcMain.handle(
+    'update-content-protection',
+    async (): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const mainWindow = manager.getMainWindow()
+        if (mainWindow) {
+          const contentProtection = await mainWindow.webContents.executeJavaScript(
+            'window.electronAPI ? localStorage.getItem("contentProtection") !== "false" : true'
+          )
+          mainWindow.setContentProtection(contentProtection)
+          console.log('Content protection updated:', contentProtection)
+        }
+        return { success: true }
+      } catch (error) {
+        console.error('Error updating content protection:', error)
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to update content protection',
+        }
+      }
     }
+  )
+}
+
+const initialize = async (): Promise<void> => {
+  try {
+    // Initialize services and managers
+    windowManagerInstance = createWindowManager()
+    await windowManagerInstance.createMainWindow()
+
+    // Setup IPC handlers
+    geminiService.setupIpcHandlers()
+    windowManagerInstance.setupIpcHandlers()
+    setupGeneralIpcHandlers(windowManagerInstance)
+
+    console.log('Application initialized successfully')
+  } catch (error) {
+    console.error('Failed to initialize application:', error)
+    app.quit()
   }
 }
 
-// Create and start the application
-const application = new Application()
+const cleanup = (): void => {
+  try {
+    geminiService.stopMacOSAudioCapture()
+    windowManagerInstance?.cleanup()
+    console.log('Application cleanup completed')
+  } catch (error) {
+    console.error('Error during cleanup:', error)
+  }
+}
 
-// Export for potential external access
-export default application
+//function to send messages to renderer
+export const sendToRenderer = (channel: string, data: any): void => {
+  if (windowManagerInstance) {
+    windowManagerInstance.sendToRenderer(channel, data)
+  }
+}
+
+// App Event Listeners
+app.whenReady().then(initialize)
+
+app.on('window-all-closed', () => {
+  cleanup()
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
+})
+
+app.on('before-quit', cleanup)
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    windowManagerInstance?.createMainWindow()
+  }
+})
+
+// Export the cleanup function for potential external use
+export { cleanup }

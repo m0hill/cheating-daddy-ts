@@ -12,7 +12,7 @@ import OnboardingView from './components/views/OnboardingView'
 import { useIpc, useWindowResize } from './hooks'
 import { useAppStore } from './stores/appStore'
 
-function App() {
+const App = () => {
   const {
     currentView,
     setCurrentView,

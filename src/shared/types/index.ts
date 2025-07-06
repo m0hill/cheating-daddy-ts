@@ -1,6 +1,4 @@
-// ============================================================================
 // Core Application Types
-// ============================================================================
 
 export type ViewType =
   | 'onboarding'
@@ -19,10 +17,7 @@ export type ImageQuality = 'high' | 'medium' | 'low'
 
 export type ScreenshotInterval = 'manual' | '1' | '2' | '5' | '10'
 
-// ============================================================================
 // Application State
-// ============================================================================
-
 export interface AppState {
   currentView: ViewType
   statusText: string
@@ -40,10 +35,7 @@ export interface AppState {
   isClickThrough: boolean
 }
 
-// ============================================================================
 // Keybinding System
-// ============================================================================
-
 export interface KeybindConfig {
   moveUp: string
   moveDown: string
@@ -58,10 +50,7 @@ export interface KeybindConfig {
   scrollDown: string
 }
 
-// ============================================================================
 // Session and Conversation Management
-// ============================================================================
-
 export interface ConversationTurn {
   timestamp: number
   transcription: string
@@ -80,10 +69,7 @@ export interface SessionData {
   history: ConversationTurn[]
 }
 
-// ============================================================================
 // Audio and Video Configuration
-// ============================================================================
-
 export interface AudioConfig {
   sampleRate: number
   channelCount: number
@@ -101,10 +87,7 @@ export interface MediaCaptureConfig {
   audio: AudioConfig | false
 }
 
-// ============================================================================
 // Token Tracking for Rate Limiting
-// ============================================================================
-
 export interface TokenEntry {
   timestamp: number
   count: number
@@ -122,10 +105,7 @@ export interface RateLimitSettings {
   throttleAtPercent: number
 }
 
-// ============================================================================
 // IPC Communication Types
-// ============================================================================
-
 export interface IpcResult<T = any> {
   success: boolean
   data?: T
@@ -149,10 +129,7 @@ export interface GeminiInitParams {
   language?: string
 }
 
-// ============================================================================
 // IPC Channel Definitions
-// ============================================================================
-
 export interface IpcChannels {
   // Gemini AI Service
   'initialize-gemini': (params: GeminiInitParams) => Promise<boolean>
@@ -183,10 +160,7 @@ export interface IpcChannels {
   'update-content-protection': () => Promise<IpcResult>
 }
 
-// ============================================================================
 // Event Channel Definitions (Main -> Renderer)
-// ============================================================================
-
 export interface IpcEvents {
   'update-response': string
   'update-status': string
@@ -204,20 +178,14 @@ export interface IpcEvents {
   'scroll-response-down': void
 }
 
-// ============================================================================
 // Platform Detection
-// ============================================================================
-
 export interface PlatformInfo {
   isMacOS: boolean
   isLinux: boolean
   isWindows: boolean
 }
 
-// ============================================================================
 // Language Options
-// ============================================================================
-
 export interface LanguageOption {
   value: string
   name: string
@@ -229,10 +197,7 @@ export interface ProfileOption {
   description: string
 }
 
-// ============================================================================
 // Component Props Interfaces
-// ============================================================================
-
 export interface BaseViewProps {
   className?: string
 }
@@ -286,10 +251,7 @@ export interface OnboardingViewProps extends BaseViewProps {
   onClose: () => void
 }
 
-// ============================================================================
 // Error Types
-// ============================================================================
-
 export class AppError extends Error {
   constructor(
     message: string,

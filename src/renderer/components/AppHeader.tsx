@@ -14,7 +14,7 @@ interface AppHeaderProps {
   onHideToggleClick: () => void
 }
 
-export default function AppHeader({
+const AppHeader = ({
   onCustomizeClick,
   onHelpClick,
   onHistoryClick,
@@ -22,7 +22,7 @@ export default function AppHeader({
   onCloseClick,
   onBackClick,
   onHideToggleClick,
-}: AppHeaderProps) {
+}: AppHeaderProps) => {
   const { currentView, statusText, startTime, advancedMode, isClickThrough } = useAppStore()
   const electronAPI = useIpc()
   const [elapsedTime, setElapsedTime] = useState('')
@@ -153,3 +153,5 @@ export default function AppHeader({
     </div>
   )
 }
+
+export default AppHeader

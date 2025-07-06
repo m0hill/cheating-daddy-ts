@@ -52,7 +52,7 @@ const colorSchemes = [
   ],
 ]
 
-export default function OnboardingView({ onComplete, onClose: _onClose }: OnboardingViewProps) {
+const OnboardingView = ({ onComplete, onClose: _onClose }: OnboardingViewProps) => {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [contextText, setContextText] = useState('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -256,3 +256,5 @@ export default function OnboardingView({ onComplete, onClose: _onClose }: Onboar
     </div>
   )
 }
+
+export default OnboardingView

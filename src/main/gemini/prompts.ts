@@ -171,11 +171,11 @@ Provide only the exact words to say in **markdown format**. Focus on finding win
   },
 }
 
-function buildSystemPrompt(
+const buildSystemPrompt = (
   promptParts: PromptParts,
   customPrompt = '',
   googleSearchEnabled = true
-): string {
+): string => {
   const sections = [promptParts.intro, '\n\n', promptParts.formatRequirements]
 
   // Only add search usage section if Google Search is enabled
@@ -195,11 +195,11 @@ function buildSystemPrompt(
   return sections.join('')
 }
 
-export function getSystemPrompt(
+export const getSystemPrompt = (
   profile: ProfileType,
   customPrompt = '',
   googleSearchEnabled = true
-): string {
+): string => {
   const promptParts = profilePrompts[profile] || profilePrompts.interview
   return buildSystemPrompt(promptParts, customPrompt, googleSearchEnabled)
 }

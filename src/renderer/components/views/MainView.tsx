@@ -8,7 +8,7 @@ interface MainViewProps {
   onAPIKeyHelp: () => void
 }
 
-export default function MainView({ onStart, onAPIKeyHelp }: MainViewProps) {
+const MainView = ({ onStart, onAPIKeyHelp }: MainViewProps) => {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('apiKey') || '')
   const [isApiKeyVisible, setIsApiKeyVisible] = useState(false)
   const [isInitializing, setIsInitializing] = useState(false)
@@ -158,3 +158,5 @@ export default function MainView({ onStart, onAPIKeyHelp }: MainViewProps) {
     </div>
   )
 }
+
+export default MainView

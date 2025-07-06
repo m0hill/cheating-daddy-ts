@@ -20,45 +20,38 @@ interface ReconnectionParams {
   language: string
 }
 
-export class GeminiService {
-  // Session management
-  private currentSession: any = null
-  private currentSessionId: string | null = null
-  private currentTranscription = ''
-  private conversationHistory: ConversationTurn[] = []
-  private isInitializingSession = false
+const createGeminiService = () => {
+  // State variables
+  let currentSession: any = null
+  let currentSessionId: string | null = null
+  let currentTranscription = ''
+  let conversationHistory: ConversationTurn[] = []
+  let isInitializingSession = false
+  let systemAudioProc: ChildProcess | null = null
+  let messageBuffer = ''
+  let reconnectionAttempts = 0
+  const maxReconnectionAttempts = 3
+  const reconnectionDelay = 2000 // 2 seconds
+  let lastSessionParams: ReconnectionParams | null = null
 
-  // Audio capture
-  private systemAudioProc: ChildProcess | null = null
-  private messageBuffer = ''
-
-  // Reconnection handling
-  private reconnectionAttempts = 0
-  private readonly maxReconnectionAttempts = 3
-  private readonly reconnectionDelay = 2000 // 2 seconds
-  private lastSessionParams: ReconnectionParams | null = null
-
-  constructor() {
-    this.initializeNewSession()
-  }
-
-  private sendToRenderer(channel: string, data: any): void {
+  // Internal functions (formerly private methods)
+  const sendToRenderer = (channel: string, data: any): void => {
     const windows = BrowserWindow.getAllWindows()
     if (windows.length > 0) {
       windows[0].webContents.send(channel, data)
     }
   }
 
-  private initializeNewSession(): void {
-    this.currentSessionId = Date.now().toString()
-    this.currentTranscription = ''
-    this.conversationHistory = []
-    console.log('New conversation session started:', this.currentSessionId)
+  const initializeNewSession = (): void => {
+    currentSessionId = Date.now().toString()
+    currentTranscription = ''
+    conversationHistory = []
+    console.log('New conversation session started:', currentSessionId)
   }
 
-  private saveConversationTurn(transcription: string, aiResponse: string): void {
-    if (!this.currentSessionId) {
-      this.initializeNewSession()
+  const saveConversationTurn = (transcription: string, aiResponse: string): void => {
+    if (!currentSessionId) {
+      initializeNewSession()
     }
 
     const conversationTurn: ConversationTurn = {
@@ -67,32 +60,30 @@ export class GeminiService {
       ai_response: aiResponse.trim(),
     }
 
-    this.conversationHistory.push(conversationTurn)
+    conversationHistory.push(conversationTurn)
     console.log('Saved conversation turn:', conversationTurn)
 
     // Send to renderer to save in IndexedDB
-    this.sendToRenderer('save-conversation-turn', {
-      sessionId: this.currentSessionId,
+    sendToRenderer('save-conversation-turn', {
+      sessionId: currentSessionId,
       turn: conversationTurn,
-      fullHistory: this.conversationHistory,
+      fullHistory: conversationHistory,
     })
   }
 
-  private getCurrentSessionData(): SessionData {
-    return {
-      sessionId: this.currentSessionId,
-      history: this.conversationHistory,
-    }
-  }
+  const getCurrentSessionData = (): SessionData => ({
+    sessionId: currentSessionId,
+    history: conversationHistory,
+  })
 
-  private async sendReconnectionContext(): Promise<void> {
-    if (!this.currentSession || this.conversationHistory.length === 0) {
+  const sendReconnectionContext = async (): Promise<void> => {
+    if (!currentSession || conversationHistory.length === 0) {
       return
     }
 
     try {
       // Gather all transcriptions from the conversation history
-      const transcriptions = this.conversationHistory
+      const transcriptions = conversationHistory
         .map(turn => turn.transcription)
         .filter(transcription => transcription && transcription.trim().length > 0)
 
@@ -106,7 +97,7 @@ export class GeminiService {
       console.log('Sending reconnection context with', transcriptions.length, 'previous questions')
 
       // Send the context message to the new session
-      await this.currentSession.sendRealtimeInput({
+      await currentSession.sendRealtimeInput({
         text: contextMessage,
       })
     } catch (error) {
@@ -114,11 +105,11 @@ export class GeminiService {
     }
   }
 
-  private async getEnabledTools(): Promise<any[]> {
+  const getEnabledTools = async (): Promise<any[]> => {
     const tools: any[] = []
 
     // Check if Google Search is enabled (default: true)
-    const googleSearchEnabled = await this.getStoredSetting('googleSearchEnabled', 'true')
+    const googleSearchEnabled = await getStoredSetting('googleSearchEnabled', 'true')
     console.log('Google Search enabled:', googleSearchEnabled)
 
     if (googleSearchEnabled === 'true') {
@@ -131,7 +122,7 @@ export class GeminiService {
     return tools
   }
 
-  private async getStoredSetting(key: string, defaultValue: string): Promise<string> {
+  const getStoredSetting = async (key: string, defaultValue: string): Promise<string> => {
     try {
       const windows = BrowserWindow.getAllWindows()
       if (windows.length > 0) {
@@ -168,78 +159,105 @@ export class GeminiService {
     return defaultValue
   }
 
-  private async attemptReconnection(): Promise<boolean> {
-    if (!this.lastSessionParams || this.reconnectionAttempts >= this.maxReconnectionAttempts) {
+  const attemptReconnection = async (): Promise<boolean> => {
+    if (!lastSessionParams || reconnectionAttempts >= maxReconnectionAttempts) {
       console.log('Max reconnection attempts reached or no session params stored')
-      this.sendToRenderer('update-status', 'Session closed')
+      sendToRenderer('update-status', 'Session closed')
       return false
     }
 
-    this.reconnectionAttempts++
-    console.log(
-      `Attempting reconnection ${this.reconnectionAttempts}/${this.maxReconnectionAttempts}...`
-    )
+    reconnectionAttempts++
+    console.log(`Attempting reconnection ${reconnectionAttempts}/${maxReconnectionAttempts}...`)
 
     // Wait before attempting reconnection
-    await new Promise(resolve => setTimeout(resolve, this.reconnectionDelay))
+    await new Promise(resolve => setTimeout(resolve, reconnectionDelay))
 
     try {
-      const session = await this.initializeGeminiSession(
-        this.lastSessionParams.apiKey,
-        this.lastSessionParams.customPrompt,
-        this.lastSessionParams.profile,
-        this.lastSessionParams.language,
+      const session = await initializeGeminiSession(
+        lastSessionParams.apiKey,
+        lastSessionParams.customPrompt,
+        lastSessionParams.profile,
+        lastSessionParams.language,
         true // isReconnection flag
       )
 
       if (session) {
-        this.currentSession = session
-        this.reconnectionAttempts = 0 // Reset counter on successful reconnection
+        currentSession = session
+        reconnectionAttempts = 0 // Reset counter on successful reconnection
         console.log('Live session reconnected')
 
         // Send context message with previous transcriptions
-        await this.sendReconnectionContext()
+        await sendReconnectionContext()
 
         return true
       }
     } catch (error) {
-      console.error(`Reconnection attempt ${this.reconnectionAttempts} failed:`, error)
+      console.error(`Reconnection attempt ${reconnectionAttempts} failed:`, error)
     }
 
     // If this attempt failed, try again
-    if (this.reconnectionAttempts < this.maxReconnectionAttempts) {
-      return this.attemptReconnection()
+    if (reconnectionAttempts < maxReconnectionAttempts) {
+      return attemptReconnection()
     } else {
       console.log('All reconnection attempts failed')
-      this.sendToRenderer('update-status', 'Session closed')
+      sendToRenderer('update-status', 'Session closed')
       return false
     }
   }
 
-  public async initializeGeminiSession(
+  const convertStereoToMono = (stereoBuffer: Buffer): Buffer => {
+    const samples = stereoBuffer.length / 4
+    const monoBuffer = Buffer.alloc(samples * 2)
+
+    for (let i = 0; i < samples; i++) {
+      const leftSample = stereoBuffer.readInt16LE(i * 4)
+      monoBuffer.writeInt16LE(leftSample, i * 2)
+    }
+
+    return monoBuffer
+  }
+
+  const sendAudioToGemini = async (base64Data: string): Promise<void> => {
+    if (!currentSession) return
+
+    try {
+      process.stdout.write('.')
+      await currentSession.sendRealtimeInput({
+        audio: {
+          data: base64Data,
+          mimeType: 'audio/pcm;rate=24000',
+        },
+      })
+    } catch (error) {
+      console.error('Error sending audio to Gemini:', error)
+    }
+  }
+
+  // Public API
+  const initializeGeminiSession = async (
     apiKey: string,
     customPrompt = '',
     profile = 'interview',
     language = 'en-US',
     isReconnection = false
-  ): Promise<any> {
-    if (this.isInitializingSession) {
+  ): Promise<any> => {
+    if (isInitializingSession) {
       console.log('Session initialization already in progress')
       return false
     }
 
-    this.isInitializingSession = true
-    this.sendToRenderer('session-initializing', true)
+    isInitializingSession = true
+    sendToRenderer('session-initializing', true)
 
     // Store session parameters for reconnection (only if not already reconnecting)
     if (!isReconnection) {
-      this.lastSessionParams = {
+      lastSessionParams = {
         apiKey,
         customPrompt,
         profile,
         language,
       }
-      this.reconnectionAttempts = 0 // Reset counter for new session
+      reconnectionAttempts = 0 // Reset counter for new session
     }
 
     const client = new GoogleGenAI({
@@ -248,14 +266,14 @@ export class GeminiService {
     })
 
     // Get enabled tools first to determine Google Search status
-    const enabledTools = await this.getEnabledTools()
+    const enabledTools = await getEnabledTools()
     const googleSearchEnabled = enabledTools.some(tool => tool.googleSearch)
 
     const systemPrompt = getSystemPrompt(profile as ProfileType, customPrompt, googleSearchEnabled)
 
     // Initialize new conversation session (only if not reconnecting)
     if (!isReconnection) {
-      this.initializeNewSession()
+      initializeNewSession()
     }
 
     try {
@@ -263,14 +281,14 @@ export class GeminiService {
         model: 'gemini-live-2.5-flash-preview',
         callbacks: {
           onopen: () => {
-            this.sendToRenderer('update-status', 'Live session connected')
+            sendToRenderer('update-status', 'Live session connected')
           },
           onmessage: (message: any) => {
             console.log('----------------', message)
 
             // Handle transcription input
             if (message.serverContent?.inputTranscription?.text) {
-              this.currentTranscription += message.serverContent.inputTranscription.text
+              currentTranscription += message.serverContent.inputTranscription.text
             }
 
             // Handle AI model response
@@ -278,25 +296,25 @@ export class GeminiService {
               for (const part of message.serverContent.modelTurn.parts) {
                 console.log(part)
                 if (part.text) {
-                  this.messageBuffer += part.text
+                  messageBuffer += part.text
                 }
               }
             }
 
             if (message.serverContent?.generationComplete) {
-              this.sendToRenderer('update-response', this.messageBuffer)
+              sendToRenderer('update-response', messageBuffer)
 
               // Save conversation turn when we have both transcription and AI response
-              if (this.currentTranscription && this.messageBuffer) {
-                this.saveConversationTurn(this.currentTranscription, this.messageBuffer)
-                this.currentTranscription = '' // Reset for next turn
+              if (currentTranscription && messageBuffer) {
+                saveConversationTurn(currentTranscription, messageBuffer)
+                currentTranscription = '' // Reset for next turn
               }
 
-              this.messageBuffer = ''
+              messageBuffer = ''
             }
 
             if (message.serverContent?.turnComplete) {
-              this.sendToRenderer('update-status', 'Listening...')
+              sendToRenderer('update-status', 'Listening...')
             }
           },
           onerror: (e: any) => {
@@ -312,13 +330,13 @@ export class GeminiService {
 
             if (isApiKeyError) {
               console.log('Error due to invalid API key - stopping reconnection attempts')
-              this.lastSessionParams = null // Clear session params to prevent reconnection
-              this.reconnectionAttempts = this.maxReconnectionAttempts // Stop further attempts
-              this.sendToRenderer('update-status', 'Error: Invalid API key')
+              lastSessionParams = null // Clear session params to prevent reconnection
+              reconnectionAttempts = maxReconnectionAttempts // Stop further attempts
+              sendToRenderer('update-status', 'Error: Invalid API key')
               return
             }
 
-            this.sendToRenderer('update-status', 'Error: ' + e.message)
+            sendToRenderer('update-status', 'Error: ' + e.message)
           },
           onclose: (e: any) => {
             console.debug('Session closed:', e.reason)
@@ -333,21 +351,18 @@ export class GeminiService {
 
             if (isApiKeyError) {
               console.log('Session closed due to invalid API key - stopping reconnection attempts')
-              this.lastSessionParams = null // Clear session params to prevent reconnection
-              this.reconnectionAttempts = this.maxReconnectionAttempts // Stop further attempts
-              this.sendToRenderer('update-status', 'Session closed: Invalid API key')
+              lastSessionParams = null // Clear session params to prevent reconnection
+              reconnectionAttempts = maxReconnectionAttempts // Stop further attempts
+              sendToRenderer('update-status', 'Session closed: Invalid API key')
               return
             }
 
             // Attempt automatic reconnection for server-side closures
-            if (
-              this.lastSessionParams &&
-              this.reconnectionAttempts < this.maxReconnectionAttempts
-            ) {
+            if (lastSessionParams && reconnectionAttempts < maxReconnectionAttempts) {
               console.log('Attempting automatic reconnection...')
-              this.attemptReconnection()
+              attemptReconnection()
             } else {
-              this.sendToRenderer('update-status', 'Session closed')
+              sendToRenderer('update-status', 'Session closed')
             }
           },
         },
@@ -363,18 +378,18 @@ export class GeminiService {
         },
       })
 
-      this.isInitializingSession = false
-      this.sendToRenderer('session-initializing', false)
+      isInitializingSession = false
+      sendToRenderer('session-initializing', false)
       return session
     } catch (error) {
       console.error('Failed to initialize Gemini session:', error)
-      this.isInitializingSession = false
-      this.sendToRenderer('session-initializing', false)
+      isInitializingSession = false
+      sendToRenderer('session-initializing', false)
       return null
     }
   }
 
-  public async killExistingSystemAudioDump(): Promise<void> {
+  const killExistingSystemAudioDump = async (): Promise<void> => {
     return new Promise(resolve => {
       console.log('Checking for existing SystemAudioDump processes...')
 
@@ -405,11 +420,11 @@ export class GeminiService {
     })
   }
 
-  public async startMacOSAudioCapture(): Promise<boolean> {
+  const startMacOSAudioCapture = async (): Promise<boolean> => {
     if (process.platform !== 'darwin') return false
 
     // Kill any existing SystemAudioDump processes first
-    await this.killExistingSystemAudioDump()
+    await killExistingSystemAudioDump()
 
     console.log('Starting macOS audio capture with SystemAudioDump...')
 
@@ -425,16 +440,16 @@ export class GeminiService {
 
     console.log('SystemAudioDump path:', systemAudioPath)
 
-    this.systemAudioProc = spawn(systemAudioPath, [], {
+    systemAudioProc = spawn(systemAudioPath, [], {
       stdio: ['ignore', 'pipe', 'pipe'],
     })
 
-    if (!this.systemAudioProc.pid) {
+    if (!systemAudioProc.pid) {
       console.error('Failed to start SystemAudioDump')
       return false
     }
 
-    console.log('SystemAudioDump started with PID:', this.systemAudioProc.pid)
+    console.log('SystemAudioDump started with PID:', systemAudioProc.pid)
 
     const CHUNK_DURATION = 0.1
     const SAMPLE_RATE = 24000
@@ -444,16 +459,16 @@ export class GeminiService {
 
     let audioBuffer = Buffer.alloc(0)
 
-    this.systemAudioProc.stdout?.on('data', data => {
+    systemAudioProc.stdout?.on('data', data => {
       audioBuffer = Buffer.concat([audioBuffer, data])
 
       while (audioBuffer.length >= CHUNK_SIZE) {
         const chunk = audioBuffer.slice(0, CHUNK_SIZE)
         audioBuffer = audioBuffer.slice(CHUNK_SIZE)
 
-        const monoChunk = CHANNELS === 2 ? this.convertStereoToMono(chunk) : chunk
+        const monoChunk = CHANNELS === 2 ? convertStereoToMono(chunk) : chunk
         const base64Data = monoChunk.toString('base64')
-        this.sendAudioToGemini(base64Data)
+        sendAudioToGemini(base64Data)
 
         if (process.env.DEBUG_AUDIO) {
           console.log(`Processed audio chunk: ${chunk.length} bytes`)
@@ -467,66 +482,38 @@ export class GeminiService {
       }
     })
 
-    this.systemAudioProc.stderr?.on('data', data => {
+    systemAudioProc.stderr?.on('data', data => {
       console.error('SystemAudioDump stderr:', data.toString())
     })
 
-    this.systemAudioProc.on('close', code => {
+    systemAudioProc.on('close', code => {
       console.log('SystemAudioDump process closed with code:', code)
-      this.systemAudioProc = null
+      systemAudioProc = null
     })
 
-    this.systemAudioProc.on('error', err => {
+    systemAudioProc.on('error', err => {
       console.error('SystemAudioDump process error:', err)
-      this.systemAudioProc = null
+      systemAudioProc = null
     })
 
     return true
   }
 
-  private convertStereoToMono(stereoBuffer: Buffer): Buffer {
-    const samples = stereoBuffer.length / 4
-    const monoBuffer = Buffer.alloc(samples * 2)
-
-    for (let i = 0; i < samples; i++) {
-      const leftSample = stereoBuffer.readInt16LE(i * 4)
-      monoBuffer.writeInt16LE(leftSample, i * 2)
-    }
-
-    return monoBuffer
-  }
-
-  public stopMacOSAudioCapture(): void {
-    if (this.systemAudioProc) {
+  const stopMacOSAudioCapture = (): void => {
+    if (systemAudioProc) {
       console.log('Stopping SystemAudioDump...')
-      this.systemAudioProc.kill('SIGTERM')
-      this.systemAudioProc = null
+      systemAudioProc.kill('SIGTERM')
+      systemAudioProc = null
     }
   }
 
-  private async sendAudioToGemini(base64Data: string): Promise<void> {
-    if (!this.currentSession) return
-
-    try {
-      process.stdout.write('.')
-      await this.currentSession.sendRealtimeInput({
-        audio: {
-          data: base64Data,
-          mimeType: 'audio/pcm;rate=24000',
-        },
-      })
-    } catch (error) {
-      console.error('Error sending audio to Gemini:', error)
-    }
-  }
-
-  public setupIpcHandlers(): void {
+  const setupIpcHandlers = (): void => {
     // Initialize Gemini session
     ipcMain.handle('initialize-gemini', async (_, params: GeminiInitParams): Promise<boolean> => {
       const { apiKey, customPrompt = '', profile = 'interview', language = 'en-US' } = params
-      const session = await this.initializeGeminiSession(apiKey, customPrompt, profile, language)
+      const session = await initializeGeminiSession(apiKey, customPrompt, profile, language)
       if (session) {
-        this.currentSession = session
+        currentSession = session
         return true
       }
       return false
@@ -534,10 +521,10 @@ export class GeminiService {
 
     // Send audio content
     ipcMain.handle('send-audio-content', async (_, content: AudioContent): Promise<IpcResult> => {
-      if (!this.currentSession) return { success: false, error: 'No active Gemini session' }
+      if (!currentSession) return { success: false, error: 'No active Gemini session' }
       try {
         process.stdout.write('.')
-        await this.currentSession.sendRealtimeInput({
+        await currentSession.sendRealtimeInput({
           audio: { data: content.data, mimeType: content.mimeType },
         })
         return { success: true }
@@ -549,7 +536,7 @@ export class GeminiService {
 
     // Send image content
     ipcMain.handle('send-image-content', async (_, content: ImageContent): Promise<IpcResult> => {
-      if (!this.currentSession) return { success: false, error: 'No active Gemini session' }
+      if (!currentSession) return { success: false, error: 'No active Gemini session' }
 
       try {
         if (!content.data || typeof content.data !== 'string') {
@@ -565,7 +552,7 @@ export class GeminiService {
         }
 
         process.stdout.write('!')
-        await this.currentSession.sendRealtimeInput({
+        await currentSession.sendRealtimeInput({
           media: { data: content.data, mimeType: 'image/jpeg' },
         })
 
@@ -578,7 +565,7 @@ export class GeminiService {
 
     // Send text message
     ipcMain.handle('send-text-message', async (_, text: string): Promise<IpcResult> => {
-      if (!this.currentSession) return { success: false, error: 'No active Gemini session' }
+      if (!currentSession) return { success: false, error: 'No active Gemini session' }
 
       try {
         if (!text || typeof text !== 'string' || text.trim().length === 0) {
@@ -586,7 +573,7 @@ export class GeminiService {
         }
 
         console.log('Sending text message:', text)
-        await this.currentSession.sendRealtimeInput({ text: text.trim() })
+        await currentSession.sendRealtimeInput({ text: text.trim() })
         return { success: true }
       } catch (error) {
         console.error('Error sending text:', error)
@@ -604,7 +591,7 @@ export class GeminiService {
       }
 
       try {
-        const success = await this.startMacOSAudioCapture()
+        const success = await startMacOSAudioCapture()
         return { success }
       } catch (error) {
         console.error('Error starting macOS audio capture:', error)
@@ -614,7 +601,7 @@ export class GeminiService {
 
     ipcMain.handle('stop-macos-audio', async (): Promise<IpcResult> => {
       try {
-        this.stopMacOSAudioCapture()
+        stopMacOSAudioCapture()
         return { success: true }
       } catch (error) {
         console.error('Error stopping macOS audio capture:', error)
@@ -625,15 +612,15 @@ export class GeminiService {
     // Session management
     ipcMain.handle('close-session', async (): Promise<IpcResult> => {
       try {
-        this.stopMacOSAudioCapture()
+        stopMacOSAudioCapture()
 
         // Clear session params to prevent reconnection when user closes session
-        this.lastSessionParams = null
+        lastSessionParams = null
 
         // Cleanup any pending resources and stop audio/video capture
-        if (this.currentSession) {
-          await this.currentSession.close()
-          this.currentSession = null
+        if (currentSession) {
+          await currentSession.close()
+          currentSession = null
         }
 
         return { success: true }
@@ -646,7 +633,7 @@ export class GeminiService {
     // Conversation history handlers
     ipcMain.handle('get-current-session', async (): Promise<IpcResult<SessionData>> => {
       try {
-        return { success: true, data: this.getCurrentSessionData() }
+        return { success: true, data: getCurrentSessionData() }
       } catch (error) {
         console.error('Error getting current session:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -655,8 +642,8 @@ export class GeminiService {
 
     ipcMain.handle('start-new-session', async (): Promise<IpcResult<{ sessionId: string }>> => {
       try {
-        this.initializeNewSession()
-        return { success: true, data: { sessionId: this.currentSessionId! } }
+        initializeNewSession()
+        return { success: true, data: { sessionId: currentSessionId! } }
       } catch (error) {
         console.error('Error starting new session:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -679,4 +666,19 @@ export class GeminiService {
       }
     )
   }
+
+  // Constructor logic
+  initializeNewSession()
+
+  return {
+    initializeGeminiSession,
+    killExistingSystemAudioDump,
+    startMacOSAudioCapture,
+    stopMacOSAudioCapture,
+    setupIpcHandlers,
+  }
 }
+
+export const geminiService = createGeminiService()
+
+export type GeminiService = ReturnType<typeof createGeminiService>

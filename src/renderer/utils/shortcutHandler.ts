@@ -2,7 +2,7 @@
 import { useAppStore } from '../stores/appStore'
 
 // Global shortcut handler function
-export function handleShortcut(shortcutKey: string): void {
+export const handleShortcut = (shortcutKey: string): void => {
   console.log('Handling shortcut:', shortcutKey)
 
   // Get current view from the app store
@@ -43,7 +43,7 @@ export function handleShortcut(shortcutKey: string): void {
 }
 
 // Set up global window functions for backward compatibility
-export function setupGlobalShortcuts(): void {
+export const setupGlobalShortcuts = (): void => {
   // Make shortcut handler available globally
   ;(window as any).cheddar = {
     handleShortcut,

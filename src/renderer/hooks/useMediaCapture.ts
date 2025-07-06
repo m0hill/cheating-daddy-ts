@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { useIpc } from './index'
 import type { ImageQuality, ScreenshotInterval } from '@shared/types'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useIpc } from './index'
 
 interface TokenEntry {
   timestamp: number
@@ -19,7 +19,7 @@ interface MediaCaptureState {
   currentImageQuality: ImageQuality
 }
 
-export function useMediaCapture() {
+export const useMediaCapture = () => {
   const [state, setState] = useState<MediaCaptureState>({
     isCapturing: false,
     error: null,

@@ -14,13 +14,13 @@ interface AudioAnalysis {
 /**
  * Convert raw PCM to WAV format for easier playback and verification
  */
-export function pcmToWav(
+export const pcmToWav = (
   pcmBuffer: Buffer,
   outputPath: string,
   sampleRate = 24000,
   channels = 1,
   bitDepth = 16
-): string {
+): string => {
   const byteRate = sampleRate * channels * (bitDepth / 8)
   const blockAlign = channels * (bitDepth / 8)
   const dataSize = pcmBuffer.length
@@ -59,7 +59,7 @@ export function pcmToWav(
 /**
  * Analyze audio buffer for debugging
  */
-export function analyzeAudioBuffer(buffer: Buffer, label = 'Audio'): AudioAnalysis {
+export const analyzeAudioBuffer = (buffer: Buffer, label = 'Audio'): AudioAnalysis => {
   const int16Array = new Int16Array(buffer.buffer, buffer.byteOffset, buffer.length / 2)
 
   let minValue = 32767
@@ -106,7 +106,7 @@ export function analyzeAudioBuffer(buffer: Buffer, label = 'Audio'): AudioAnalys
 /**
  * Save audio buffer with metadata for debugging
  */
-export function saveDebugAudio(
+export const saveDebugAudio = (
   buffer: Buffer,
   type: string,
   timestamp = Date.now()
@@ -114,7 +114,7 @@ export function saveDebugAudio(
   pcmPath: string
   wavPath: string
   metaPath: string
-} {
+} => {
   const homeDir = homedir()
   const debugDir = join(homeDir, 'cheddar', 'debug')
 

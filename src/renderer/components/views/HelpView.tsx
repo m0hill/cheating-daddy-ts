@@ -2,7 +2,7 @@ import { Github } from 'lucide-react'
 import { useEffect } from 'react'
 import { useIpc, useKeybinds, useWindowResize } from '../../hooks'
 
-export default function HelpView() {
+const HelpView = () => {
   const electronAPI = useIpc()
   const { resizeForCurrentView } = useWindowResize()
   const { keybinds } = useKeybinds()
@@ -202,3 +202,5 @@ export default function HelpView() {
     </div>
   )
 }
+
+export default HelpView

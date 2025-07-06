@@ -9,7 +9,7 @@ interface ConversationStorageState {
 
 let conversationDB: IDBDatabase | null = null
 
-export function useConversationStorage() {
+export const useConversationStorage = () => {
   const [state, setState] = useState<ConversationStorageState>({
     isInitialized: false,
     error: null,

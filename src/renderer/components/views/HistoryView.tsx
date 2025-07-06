@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useConversationStorage, useWindowResize } from '../../hooks'
 
-export default function HistoryView() {
+const HistoryView = () => {
   const [sessions, setSessions] = useState<ConversationSession[]>([])
   const [selectedSession, setSelectedSession] = useState<ConversationSession | null>(null)
   const [loading, setLoading] = useState(true)
@@ -195,3 +195,5 @@ export default function HistoryView() {
     </div>
   )
 }
+
+export default HistoryView

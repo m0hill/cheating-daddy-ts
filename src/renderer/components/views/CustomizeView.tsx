@@ -11,7 +11,7 @@ import {
 } from '../../hooks'
 import { useAppStore } from '../../stores/appStore'
 
-export default function CustomizeView() {
+const CustomizeView = () => {
   const {
     selectedProfile,
     selectedLanguage,
@@ -531,3 +531,5 @@ export default function CustomizeView() {
     </div>
   )
 }
+
+export default CustomizeView

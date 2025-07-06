@@ -4,14 +4,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 export { useConversationStorage } from './useConversationStorage'
 export { useMediaCapture } from './useMediaCapture'
 
-// ============================================================================
 // Local Storage Hook
-// ============================================================================
-
-export function useLocalStorage<T>(
+export const useLocalStorage = <T>(
   key: string,
   initialValue: T
-): [T, (value: T | ((val: T) => T)) => void] {
+): [T, (value: T | ((val: T) => T)) => void] => {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
       const item = window.localStorage.getItem(key)
@@ -38,11 +35,8 @@ export function useLocalStorage<T>(
   return [storedValue, setValue]
 }
 
-// ============================================================================
 // IPC Hook for Electron Communication
-// ============================================================================
-
-export function useIpc() {
+export const useIpc = () => {
   const electronAPI = window.electronAPI
 
   if (!electronAPI) {
@@ -52,15 +46,12 @@ export function useIpc() {
   return electronAPI
 }
 
-// ============================================================================
 // Event Listener Hook
-// ============================================================================
-
-export function useEventListener<T extends keyof WindowEventMap>(
+export const useEventListener = <T extends keyof WindowEventMap>(
   eventName: T,
   handler: (event: WindowEventMap[T]) => void,
   element: EventTarget = window
-) {
+) => {
   const savedHandler = useRef(handler)
 
   useEffect(() => {
@@ -74,11 +65,8 @@ export function useEventListener<T extends keyof WindowEventMap>(
   }, [eventName, element])
 }
 
-// ============================================================================
 // Keyboard Shortcut Hook
-// ============================================================================
-
-export function useKeyboard(keybind: string, callback: () => void, enabled: boolean = true) {
+export const useKeyboard = (keybind: string, callback: () => void, enabled: boolean = true) => {
   useEffect(() => {
     if (!enabled) return
 
@@ -109,12 +97,8 @@ export function useKeyboard(keybind: string, callback: () => void, enabled: bool
   }, [keybind, callback, enabled])
 }
 
-// ============================================================================
 // Keybinds Hook for Managing Multiple Shortcuts
-// ============================================================================
-
-// Helper function to get default keybinds
-function getDefaultKeybinds(isMacOS: boolean): KeybindConfig {
+const getDefaultKeybinds = (isMacOS: boolean): KeybindConfig => {
   return {
     moveUp: isMacOS ? 'Cmd+Up' : 'Ctrl+Up',
     moveDown: isMacOS ? 'Cmd+Down' : 'Ctrl+Down',
@@ -130,7 +114,7 @@ function getDefaultKeybinds(isMacOS: boolean): KeybindConfig {
   }
 }
 
-export function useKeybinds() {
+export const useKeybinds = () => {
   const electronAPI = useIpc()
   const [keybinds, setKeybinds] = useLocalStorage<KeybindConfig>(
     'customKeybinds',
@@ -164,11 +148,8 @@ export function useKeybinds() {
   }
 }
 
-// ============================================================================
 // Font Size Hook
-// ============================================================================
-
-export function useFontSize() {
+export const useFontSize = () => {
   const [fontSize, setFontSizeState] = useLocalStorage('fontSize', 18)
 
   const setFontSize = useCallback(
@@ -187,11 +168,8 @@ export function useFontSize() {
   return [fontSize, setFontSize] as const
 }
 
-// ============================================================================
 // Background Transparency Hook
-// ============================================================================
-
-export function useBackgroundTransparency() {
+export const useBackgroundTransparency = () => {
   const [transparency, setTransparencyState] = useLocalStorage('backgroundTransparency', 0.8)
 
   const setTransparency = useCallback(
@@ -218,11 +196,8 @@ export function useBackgroundTransparency() {
   return [transparency, setTransparency] as const
 }
 
-// ============================================================================
 // Google Search Setting Hook
-// ============================================================================
-
-export function useGoogleSearch() {
+export const useGoogleSearch = () => {
   const [enabled, setEnabledState] = useLocalStorage('googleSearchEnabled', true)
   const electronAPI = useIpc()
 
@@ -241,11 +216,8 @@ export function useGoogleSearch() {
   return [enabled, setEnabled] as const
 }
 
-// ============================================================================
 // Rate Limiting Hook
-// ============================================================================
-
-export function useRateLimit() {
+export const useRateLimit = () => {
   const [throttleTokens, setThrottleTokens] = useLocalStorage('throttleTokens', true)
   const [maxTokensPerMin, setMaxTokensPerMin] = useLocalStorage('maxTokensPerMin', 1000000)
   const [throttleAtPercent, setThrottleAtPercent] = useLocalStorage('throttleAtPercent', 75)
@@ -267,11 +239,8 @@ export function useRateLimit() {
   }
 }
 
-// ============================================================================
 // Window Resize Hook
-// ============================================================================
-
-export function useWindowResize() {
+export const useWindowResize = () => {
   const electronAPI = useIpc()
 
   const resizeForCurrentView = useCallback(async () => {
@@ -288,11 +257,8 @@ export function useWindowResize() {
   return { resizeForCurrentView }
 }
 
-// ============================================================================
 // Debounce Hook
-// ============================================================================
-
-export function useDebounce<T>(value: T, delay: number): T {
+export const useDebounce = <T>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value)
 
   useEffect(() => {
@@ -308,11 +274,8 @@ export function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue
 }
 
-// ============================================================================
 // Previous Value Hook
-// ============================================================================
-
-export function usePrevious<T>(value: T): T | undefined {
+export const usePrevious = <T>(value: T): T | undefined => {
   const ref = useRef<T>()
 
   useEffect(() => {

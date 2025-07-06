@@ -3,20 +3,14 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { KeybindConfig, ViewType } from '@shared/types'
 import { BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, session } from 'electron'
-import type { GeminiService } from '../gemini/GeminiService'
+export const createWindowManager = () => {
+  let mainWindow: BrowserWindow | null = null
+  let mouseEventsIgnored = false
+  let windowResizing = false
+  let resizeAnimation: NodeJS.Timeout | null = null
+  const RESIZE_ANIMATION_DURATION = 500 // milliseconds
 
-export class WindowManager {
-  private mainWindow: BrowserWindow | null = null
-  private mouseEventsIgnored = false
-  private windowResizing = false
-  private resizeAnimation: NodeJS.Timeout | null = null
-  private readonly RESIZE_ANIMATION_DURATION = 500 // milliseconds
-
-  constructor(private geminiService: GeminiService) {
-    this.ensureDataDirectories()
-  }
-
-  private ensureDataDirectories(): void {
+  const ensureDataDirectories = (): void => {
     const homeDir = homedir()
     const cheddarDir = join(homeDir, 'cheddar')
     const dataDir = join(cheddarDir, 'data')
@@ -30,125 +24,7 @@ export class WindowManager {
     })
   }
 
-  public async createMainWindow(): Promise<BrowserWindow> {
-    // Get layout preference (default to 'normal')
-    const windowWidth = 900
-    const windowHeight = 400
-
-    this.mainWindow = new BrowserWindow({
-      width: windowWidth,
-      height: windowHeight,
-      frame: false,
-      transparent: true,
-      hasShadow: false,
-      alwaysOnTop: true,
-      skipTaskbar: true,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        backgroundThrottling: false,
-        enableBlinkFeatures: 'GetDisplayMedia',
-        webSecurity: true,
-        allowRunningInsecureContent: false,
-        preload: join(__dirname, 'index.js'),
-      },
-      backgroundColor: '#00000000',
-    })
-
-    // Setup display media handler
-    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-      desktopCapturer.getSources({ types: ['screen'] }).then(sources => {
-        callback({ video: sources[0], audio: 'loopback' })
-      })
-    })
-
-    this.mainWindow.setResizable(false)
-    this.mainWindow.setContentProtection(true)
-    this.mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-
-    // Center window at the top of the screen
-    const primaryDisplay = screen.getPrimaryDisplay()
-    const { width: screenWidth } = primaryDisplay.workAreaSize
-    const x = Math.floor((screenWidth - windowWidth) / 2)
-    const y = 0
-    this.mainWindow.setPosition(x, y)
-
-    // Platform-specific settings
-    if (process.platform === 'win32') {
-      this.mainWindow.setAlwaysOnTop(true, 'screen-saver', 1)
-    }
-
-    // For development, use Vite dev server
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-      this.mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
-      // this.mainWindow.webContents.openDevTools()
-    } else {
-      this.mainWindow.loadFile(join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`))
-    }
-
-    // Setup window event handlers
-    this.setupWindowEventHandlers()
-
-    return this.mainWindow
-  }
-
-  private setupWindowEventHandlers(): void {
-    if (!this.mainWindow) return
-
-    // After window is created, check for settings and setup shortcuts
-    this.mainWindow.webContents.once('dom-ready', () => {
-      setTimeout(() => {
-        this.initializeWindowSettings()
-      }, 150)
-    })
-  }
-
-  private async initializeWindowSettings(): Promise<void> {
-    if (!this.mainWindow) return
-
-    try {
-      const defaultKeybinds = this.getDefaultKeybinds()
-      let keybinds = defaultKeybinds
-
-      const savedSettings = await this.mainWindow.webContents.executeJavaScript(`
-        (function() {
-          try {
-            const savedKeybinds = localStorage.getItem('customKeybinds');
-            return {
-              keybinds: savedKeybinds ? JSON.parse(savedKeybinds) : null
-            };
-          } catch (e) {
-            return { keybinds: null };
-          }
-        })()
-      `)
-
-      if (savedSettings.keybinds) {
-        keybinds = { ...defaultKeybinds, ...savedSettings.keybinds }
-      }
-
-      // Apply content protection setting
-      try {
-        const contentProtection = await this.mainWindow.webContents.executeJavaScript(
-          'localStorage.getItem("contentProtection") !== "false"'
-        )
-        this.mainWindow.setContentProtection(contentProtection)
-        console.log('Content protection loaded from settings:', contentProtection)
-      } catch (error) {
-        console.error('Error loading content protection:', error)
-        this.mainWindow.setContentProtection(true)
-      }
-
-      this.updateGlobalShortcuts(keybinds)
-    } catch (error) {
-      console.error('Error initializing window settings:', error)
-      // Default to content protection enabled and default shortcuts
-      this.mainWindow.setContentProtection(true)
-      this.updateGlobalShortcuts(this.getDefaultKeybinds())
-    }
-  }
-
-  private getDefaultKeybinds(): KeybindConfig {
+  const getDefaultKeybinds = (): KeybindConfig => {
     const isMac = process.platform === 'darwin'
     return {
       moveUp: isMac ? 'Alt+Up' : 'Ctrl+Up',
@@ -165,261 +41,96 @@ export class WindowManager {
     }
   }
 
-  public updateGlobalShortcuts(keybinds: KeybindConfig): void {
-    if (!this.mainWindow) return
-
-    console.log('Updating global shortcuts with:', keybinds)
-
-    // Unregister all existing shortcuts
-    globalShortcut.unregisterAll()
-
-    const primaryDisplay = screen.getPrimaryDisplay()
-    const { width, height } = primaryDisplay.workAreaSize
-    const moveIncrement = Math.floor(Math.min(width, height) * 0.1)
-
-    // Register window movement shortcuts
-    const movementActions = {
-      moveUp: () => {
-        if (!this.mainWindow?.isVisible()) return
-        const [currentX, currentY] = this.mainWindow.getPosition()
-        this.mainWindow.setPosition(currentX, currentY - moveIncrement)
-      },
-      moveDown: () => {
-        if (!this.mainWindow?.isVisible()) return
-        const [currentX, currentY] = this.mainWindow.getPosition()
-        this.mainWindow.setPosition(currentX, currentY + moveIncrement)
-      },
-      moveLeft: () => {
-        if (!this.mainWindow?.isVisible()) return
-        const [currentX, currentY] = this.mainWindow.getPosition()
-        this.mainWindow.setPosition(currentX - moveIncrement, currentY)
-      },
-      moveRight: () => {
-        if (!this.mainWindow?.isVisible()) return
-        const [currentX, currentY] = this.mainWindow.getPosition()
-        this.mainWindow.setPosition(currentX + moveIncrement, currentY)
-      },
+  const animateWindowResize = async (
+    targetWidth: number,
+    targetHeight: number,
+    description: string
+  ): Promise<void> => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      console.log('Cannot animate resize: window has been destroyed')
+      return
     }
 
-    // Register each movement shortcut
-    Object.entries(movementActions).forEach(([action, handler]) => {
-      const keybind = keybinds[action as keyof typeof movementActions]
-      if (keybind) {
-        try {
-          globalShortcut.register(keybind, handler)
-          console.log(`Registered ${action}: ${keybind}`)
-        } catch (error) {
-          console.error(`Failed to register ${action} (${keybind}):`, error)
-        }
-      }
-    })
-
-    // Register toggle visibility shortcut
-    if (keybinds.toggleVisibility) {
-      try {
-        globalShortcut.register(keybinds.toggleVisibility, () => {
-          if (!this.mainWindow) return
-          if (this.mainWindow.isVisible()) {
-            this.mainWindow.hide()
-          } else {
-            this.mainWindow.showInactive()
-          }
-        })
-        console.log(`Registered toggleVisibility: ${keybinds.toggleVisibility}`)
-      } catch (error) {
-        console.error(`Failed to register toggleVisibility (${keybinds.toggleVisibility}):`, error)
-      }
+    // Prevent concurrent resize operations
+    if (windowResizing) {
+      console.log('Resize already in progress, skipping...')
+      return
     }
 
-    // Register toggle click-through shortcut
-    if (keybinds.toggleClickThrough) {
-      try {
-        globalShortcut.register(keybinds.toggleClickThrough, () => {
-          if (!this.mainWindow) return
-          this.mouseEventsIgnored = !this.mouseEventsIgnored
-          if (this.mouseEventsIgnored) {
-            this.mainWindow.setIgnoreMouseEvents(true, { forward: true })
-            console.log('Mouse events ignored')
-          } else {
-            this.mainWindow.setIgnoreMouseEvents(false)
-            console.log('Mouse events enabled')
-          }
-          this.mainWindow.webContents.send('click-through-toggled', this.mouseEventsIgnored)
-        })
-        console.log(`Registered toggleClickThrough: ${keybinds.toggleClickThrough}`)
-      } catch (error) {
-        console.error(
-          `Failed to register toggleClickThrough (${keybinds.toggleClickThrough}):`,
-          error
-        )
-      }
+    // Clear any existing animation
+    if (resizeAnimation) {
+      clearTimeout(resizeAnimation)
+      resizeAnimation = null
     }
 
-    // Register next step shortcut
-    if (keybinds.nextStep) {
-      try {
-        globalShortcut.register(keybinds.nextStep, async () => {
-          if (!this.mainWindow) return
-          console.log('Next step shortcut triggered')
-          try {
-            const isMac = process.platform === 'darwin'
-            const shortcutKey = isMac ? 'cmd+enter' : 'ctrl+enter'
+    const [startWidth, startHeight] = mainWindow.getSize()
 
-            this.mainWindow.webContents.executeJavaScript(`
-              if (window.electronAPI && window.cheddar && window.cheddar.handleShortcut) {
-                window.cheddar.handleShortcut('${shortcutKey}');
-              } else {
-                console.log('handleShortcut function not available');
-              }
-            `)
-          } catch (error) {
-            console.error('Error handling next step shortcut:', error)
-          }
-        })
-        console.log(`Registered nextStep: ${keybinds.nextStep}`)
-      } catch (error) {
-        console.error(`Failed to register nextStep (${keybinds.nextStep}):`, error)
-      }
+    // If already at target size, no need to animate
+    if (startWidth === targetWidth && startHeight === targetHeight) {
+      console.log(`Window already at target size for ${description}`)
+      return
     }
 
-    // Register response navigation shortcuts
-    if (keybinds.previousResponse) {
-      try {
-        globalShortcut.register(keybinds.previousResponse, () => {
-          console.log('Previous response shortcut triggered')
-          this.sendToRenderer('navigate-previous-response', undefined)
-        })
-        console.log(`Registered previousResponse: ${keybinds.previousResponse}`)
-      } catch (error) {
-        console.error(`Failed to register previousResponse (${keybinds.previousResponse}):`, error)
-      }
-    }
-
-    if (keybinds.nextResponse) {
-      try {
-        globalShortcut.register(keybinds.nextResponse, () => {
-          console.log('Next response shortcut triggered')
-          this.sendToRenderer('navigate-next-response', undefined)
-        })
-        console.log(`Registered nextResponse: ${keybinds.nextResponse}`)
-      } catch (error) {
-        console.error(`Failed to register nextResponse (${keybinds.nextResponse}):`, error)
-      }
-    }
-
-    // Register scroll shortcuts
-    if (keybinds.scrollUp) {
-      try {
-        globalShortcut.register(keybinds.scrollUp, () => {
-          console.log('Scroll up shortcut triggered')
-          this.sendToRenderer('scroll-response-up', undefined)
-        })
-        console.log(`Registered scrollUp: ${keybinds.scrollUp}`)
-      } catch (error) {
-        console.error(`Failed to register scrollUp (${keybinds.scrollUp}):`, error)
-      }
-    }
-
-    if (keybinds.scrollDown) {
-      try {
-        globalShortcut.register(keybinds.scrollDown, () => {
-          console.log('Scroll down shortcut triggered')
-          this.sendToRenderer('scroll-response-down', undefined)
-        })
-        console.log(`Registered scrollDown: ${keybinds.scrollDown}`)
-      } catch (error) {
-        console.error(`Failed to register scrollDown (${keybinds.scrollDown}):`, error)
-      }
-    }
-  }
-
-  public setupIpcHandlers(): void {
-    // View change handler
-    ipcMain.on('view-changed', (_, view: ViewType) => {
-      if (view !== 'assistant' && this.mainWindow && !this.mainWindow.isDestroyed()) {
-        this.mainWindow.setIgnoreMouseEvents(false)
-      }
-    })
-
-    // Window minimize handler
-    ipcMain.handle('window-minimize', async () => {
-      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-        this.mainWindow.minimize()
-      }
-    })
-
-    // Window visibility toggle
-    ipcMain.handle(
-      'toggle-window-visibility',
-      async (): Promise<{ success: boolean; error?: string }> => {
-        try {
-          if (!this.mainWindow || this.mainWindow.isDestroyed()) {
-            return { success: false, error: 'Window has been destroyed' }
-          }
-
-          if (this.mainWindow.isVisible()) {
-            this.mainWindow.hide()
-          } else {
-            this.mainWindow.showInactive()
-          }
-          return { success: true }
-        } catch (error) {
-          console.error('Error toggling window visibility:', error)
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          }
-        }
-      }
+    console.log(
+      `Starting animated resize from ${startWidth}x${startHeight} to ${targetWidth}x${targetHeight}`
     )
 
-    // Window resize handler
-    ipcMain.handle('update-sizes', async (): Promise<{ success: boolean; error?: string }> => {
-      try {
-        if (!this.mainWindow || this.mainWindow.isDestroyed()) {
-          return { success: false, error: 'Window has been destroyed' }
-        }
+    windowResizing = true
+    mainWindow.setResizable(true)
 
-        // Get current view and layout mode from renderer
-        let viewName: ViewType, layoutMode: string
-        try {
-          viewName = await this.mainWindow.webContents.executeJavaScript(
-            'window.cheddar && window.cheddar.getCurrentView ? window.cheddar.getCurrentView() : "main"'
-          )
-          layoutMode =
-            (await this.mainWindow.webContents.executeJavaScript(
-              'window.cheddar && window.cheddar.getLayoutMode ? window.cheddar.getLayoutMode() : "normal"'
-            )) || 'normal'
-        } catch (error) {
-          console.warn('Failed to get view/layout from renderer, using defaults:', error)
-          viewName = 'main'
-          layoutMode = 'normal'
-        }
+    const frameRate = 60 // 60 FPS
+    const totalFrames = Math.floor(RESIZE_ANIMATION_DURATION / (1000 / frameRate))
+    let currentFrame = 0
 
-        console.log('Size update requested for view:', viewName, 'layout:', layoutMode)
+    const widthDiff = targetWidth - startWidth
+    const heightDiff = targetHeight - startHeight
 
-        const { targetWidth, targetHeight } = this.calculateWindowSize(viewName, layoutMode)
-        await this.animateWindowResize(
-          targetWidth,
-          targetHeight,
-          `${viewName} view (${layoutMode})`
-        )
-
-        return { success: true }
-      } catch (error) {
-        console.error('Error updating sizes:', error)
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }
+    const animate = () => {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        windowResizing = false
+        return
       }
-    })
+
+      currentFrame++
+      const progress = currentFrame / totalFrames
+
+      // Use easing function (ease-out)
+      const easedProgress = 1 - Math.pow(1 - progress, 3)
+
+      const currentWidth = Math.round(startWidth + widthDiff * easedProgress)
+      const currentHeight = Math.round(startHeight + heightDiff * easedProgress)
+
+      mainWindow.setSize(currentWidth, currentHeight)
+
+      // Re-center the window during animation
+      const primaryDisplay = screen.getPrimaryDisplay()
+      const { width: screenWidth } = primaryDisplay.workAreaSize
+      const x = Math.floor((screenWidth - currentWidth) / 2)
+      const y = 0
+      mainWindow.setPosition(x, y)
+
+      if (currentFrame >= totalFrames) {
+        windowResizing = false
+        mainWindow.setResizable(false)
+
+        // Ensure final size is exact
+        mainWindow.setSize(targetWidth, targetHeight)
+        const finalX = Math.floor((screenWidth - targetWidth) / 2)
+        mainWindow.setPosition(finalX, 0)
+
+        console.log(`Animation complete: ${targetWidth}x${targetHeight}`)
+      } else {
+        resizeAnimation = setTimeout(animate, 1000 / frameRate)
+      }
+    }
+
+    animate()
   }
 
-  private calculateWindowSize(
+  const calculateWindowSize = (
     viewName: ViewType,
     layoutMode: string
-  ): { targetWidth: number; targetHeight: number } {
+  ): { targetWidth: number; targetHeight: number } => {
     // Determine base size from layout mode
     const baseWidth = layoutMode === 'compact' ? 700 : 900
     const baseHeight = layoutMode === 'compact' ? 300 : 400
@@ -456,115 +167,411 @@ export class WindowManager {
     return { targetWidth, targetHeight }
   }
 
-  private async animateWindowResize(
-    targetWidth: number,
-    targetHeight: number,
-    description: string
-  ): Promise<void> {
-    if (!this.mainWindow || this.mainWindow.isDestroyed()) {
-      console.log('Cannot animate resize: window has been destroyed')
-      return
+  const updateGlobalShortcuts = (keybinds: KeybindConfig): void => {
+    if (!mainWindow) return
+
+    console.log('Updating global shortcuts with:', keybinds)
+
+    // Unregister all existing shortcuts
+    globalShortcut.unregisterAll()
+
+    const primaryDisplay = screen.getPrimaryDisplay()
+    const { width, height } = primaryDisplay.workAreaSize
+    const moveIncrement = Math.floor(Math.min(width, height) * 0.1)
+
+    // Register window movement shortcuts
+    const movementActions = {
+      moveUp: () => {
+        if (!mainWindow?.isVisible()) return
+        const [currentX, currentY] = mainWindow.getPosition()
+        mainWindow.setPosition(currentX, currentY - moveIncrement)
+      },
+      moveDown: () => {
+        if (!mainWindow?.isVisible()) return
+        const [currentX, currentY] = mainWindow.getPosition()
+        mainWindow.setPosition(currentX, currentY + moveIncrement)
+      },
+      moveLeft: () => {
+        if (!mainWindow?.isVisible()) return
+        const [currentX, currentY] = mainWindow.getPosition()
+        mainWindow.setPosition(currentX - moveIncrement, currentY)
+      },
+      moveRight: () => {
+        if (!mainWindow?.isVisible()) return
+        const [currentX, currentY] = mainWindow.getPosition()
+        mainWindow.setPosition(currentX + moveIncrement, currentY)
+      },
     }
 
-    // Clear any existing animation
-    if (this.resizeAnimation) {
-      clearTimeout(this.resizeAnimation)
-      this.resizeAnimation = null
+    // Register each movement shortcut
+    Object.entries(movementActions).forEach(([action, handler]) => {
+      const keybind = keybinds[action as keyof typeof movementActions]
+      if (keybind) {
+        try {
+          globalShortcut.register(keybind, handler)
+          console.log(`Registered ${action}: ${keybind}`)
+        } catch (error) {
+          console.error(`Failed to register ${action} (${keybind}):`, error)
+        }
+      }
+    })
+
+    // Register toggle visibility shortcut
+    if (keybinds.toggleVisibility) {
+      try {
+        globalShortcut.register(keybinds.toggleVisibility, () => {
+          if (!mainWindow) return
+          if (mainWindow.isVisible()) {
+            mainWindow.hide()
+          } else {
+            mainWindow.showInactive()
+          }
+        })
+        console.log(`Registered toggleVisibility: ${keybinds.toggleVisibility}`)
+      } catch (error) {
+        console.error(`Failed to register toggleVisibility (${keybinds.toggleVisibility}):`, error)
+      }
     }
 
-    const [startWidth, startHeight] = this.mainWindow.getSize()
-
-    // If already at target size, no need to animate
-    if (startWidth === targetWidth && startHeight === targetHeight) {
-      console.log(`Window already at target size for ${description}`)
-      return
+    // Register toggle click-through shortcut
+    if (keybinds.toggleClickThrough) {
+      try {
+        globalShortcut.register(keybinds.toggleClickThrough, () => {
+          if (!mainWindow) return
+          mouseEventsIgnored = !mouseEventsIgnored
+          if (mouseEventsIgnored) {
+            mainWindow.setIgnoreMouseEvents(true, { forward: true })
+            console.log('Mouse events ignored')
+          } else {
+            mainWindow.setIgnoreMouseEvents(false)
+            console.log('Mouse events enabled')
+          }
+          mainWindow.webContents.send('click-through-toggled', mouseEventsIgnored)
+        })
+        console.log(`Registered toggleClickThrough: ${keybinds.toggleClickThrough}`)
+      } catch (error) {
+        console.error(
+          `Failed to register toggleClickThrough (${keybinds.toggleClickThrough}):`,
+          error
+        )
+      }
     }
 
-    console.log(
-      `Starting animated resize from ${startWidth}x${startHeight} to ${targetWidth}x${targetHeight}`
+    // Register next step shortcut
+    if (keybinds.nextStep) {
+      try {
+        globalShortcut.register(keybinds.nextStep, async () => {
+          if (!mainWindow) return
+          console.log('Next step shortcut triggered')
+          try {
+            const isMac = process.platform === 'darwin'
+            const shortcutKey = isMac ? 'cmd+enter' : 'ctrl+enter'
+
+            mainWindow.webContents.executeJavaScript(`
+              if (window.electronAPI && window.cheddar && window.cheddar.handleShortcut) {
+                window.cheddar.handleShortcut('${shortcutKey}');
+              } else {
+                console.log('handleShortcut function not available');
+              }
+            `)
+          } catch (error) {
+            console.error('Error handling next step shortcut:', error)
+          }
+        })
+        console.log(`Registered nextStep: ${keybinds.nextStep}`)
+      } catch (error) {
+        console.error(`Failed to register nextStep (${keybinds.nextStep}):`, error)
+      }
+    }
+
+    // Register response navigation shortcuts
+    if (keybinds.previousResponse) {
+      try {
+        globalShortcut.register(keybinds.previousResponse, () => {
+          console.log('Previous response shortcut triggered')
+          sendToRenderer('navigate-previous-response', undefined)
+        })
+        console.log(`Registered previousResponse: ${keybinds.previousResponse}`)
+      } catch (error) {
+        console.error(`Failed to register previousResponse (${keybinds.previousResponse}):`, error)
+      }
+    }
+
+    if (keybinds.nextResponse) {
+      try {
+        globalShortcut.register(keybinds.nextResponse, () => {
+          console.log('Next response shortcut triggered')
+          sendToRenderer('navigate-next-response', undefined)
+        })
+        console.log(`Registered nextResponse: ${keybinds.nextResponse}`)
+      } catch (error) {
+        console.error(`Failed to register nextResponse (${keybinds.nextResponse}):`, error)
+      }
+    }
+
+    // Register scroll shortcuts
+    if (keybinds.scrollUp) {
+      try {
+        globalShortcut.register(keybinds.scrollUp, () => {
+          console.log('Scroll up shortcut triggered')
+          sendToRenderer('scroll-response-up', undefined)
+        })
+        console.log(`Registered scrollUp: ${keybinds.scrollUp}`)
+      } catch (error) {
+        console.error(`Failed to register scrollUp (${keybinds.scrollUp}):`, error)
+      }
+    }
+
+    if (keybinds.scrollDown) {
+      try {
+        globalShortcut.register(keybinds.scrollDown, () => {
+          console.log('Scroll down shortcut triggered')
+          sendToRenderer('scroll-response-down', undefined)
+        })
+        console.log(`Registered scrollDown: ${keybinds.scrollDown}`)
+      } catch (error) {
+        console.error(`Failed to register scrollDown (${keybinds.scrollDown}):`, error)
+      }
+    }
+  }
+
+  const initializeWindowSettings = async (): Promise<void> => {
+    if (!mainWindow) return
+
+    try {
+      const defaultKeybinds = getDefaultKeybinds()
+      let keybinds = defaultKeybinds
+
+      const savedSettings = await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          try {
+            const savedKeybinds = localStorage.getItem('customKeybinds');
+            return {
+              keybinds: savedKeybinds ? JSON.parse(savedKeybinds) : null
+            };
+          } catch (e) {
+            return { keybinds: null };
+          }
+        })()
+      `)
+
+      if (savedSettings.keybinds) {
+        keybinds = { ...defaultKeybinds, ...savedSettings.keybinds }
+      }
+
+      // Apply content protection setting
+      try {
+        const contentProtection = await mainWindow.webContents.executeJavaScript(
+          'localStorage.getItem("contentProtection") !== "false"'
+        )
+        mainWindow.setContentProtection(contentProtection)
+        console.log('Content protection loaded from settings:', contentProtection)
+      } catch (error) {
+        console.error('Error loading content protection:', error)
+        mainWindow.setContentProtection(true)
+      }
+
+      updateGlobalShortcuts(keybinds)
+    } catch (error) {
+      console.error('Error initializing window settings:', error)
+      // Default to content protection enabled and default shortcuts
+      mainWindow.setContentProtection(true)
+      updateGlobalShortcuts(getDefaultKeybinds())
+    }
+  }
+
+  const setupWindowEventHandlers = (): void => {
+    if (!mainWindow) return
+
+    // After window is created, check for settings and setup shortcuts
+    mainWindow.webContents.once('dom-ready', () => {
+      setTimeout(() => {
+        initializeWindowSettings()
+      }, 150)
+    })
+  }
+
+  const sendToRenderer = (channel: string, data: any): void => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(channel, data)
+    }
+  }
+
+  // Public API
+  const createMainWindow = async (): Promise<BrowserWindow> => {
+    // Get layout preference (default to 'normal')
+    const windowWidth = 900
+    const windowHeight = 400
+
+    mainWindow = new BrowserWindow({
+      width: windowWidth,
+      height: windowHeight,
+      frame: false,
+      transparent: true,
+      hasShadow: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        backgroundThrottling: false,
+        enableBlinkFeatures: 'GetDisplayMedia',
+        webSecurity: true,
+        allowRunningInsecureContent: false,
+        preload: join(__dirname, 'index.js'),
+      },
+      backgroundColor: '#00000000',
+    })
+
+    // Setup display media handler
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+      desktopCapturer.getSources({ types: ['screen'] }).then(sources => {
+        callback({ video: sources[0], audio: 'loopback' })
+      })
+    })
+
+    mainWindow.setResizable(false)
+    mainWindow.setContentProtection(true)
+    mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+
+    // Center window at the top of the screen
+    const primaryDisplay = screen.getPrimaryDisplay()
+    const { width: screenWidth } = primaryDisplay.workAreaSize
+    const x = Math.floor((screenWidth - windowWidth) / 2)
+    const y = 0
+    mainWindow.setPosition(x, y)
+
+    // Platform-specific settings
+    if (process.platform === 'win32') {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver', 1)
+    }
+
+    // For development, use Vite dev server
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+      mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
+      // mainWindow.webContents.openDevTools()
+    } else {
+      mainWindow.loadFile(join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`))
+    }
+
+    // Setup window event handlers
+    setupWindowEventHandlers()
+
+    return mainWindow
+  }
+
+  const setupIpcHandlers = (): void => {
+    // View change handler
+    ipcMain.on('view-changed', (_, view: ViewType) => {
+      if (view !== 'assistant' && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setIgnoreMouseEvents(false)
+      }
+    })
+
+    // Window minimize handler
+    ipcMain.handle('window-minimize', async () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.minimize()
+      }
+    })
+
+    // Window visibility toggle
+    ipcMain.handle(
+      'toggle-window-visibility',
+      async (): Promise<{ success: boolean; error?: string }> => {
+        try {
+          if (!mainWindow || mainWindow.isDestroyed()) {
+            return { success: false, error: 'Window has been destroyed' }
+          }
+
+          if (mainWindow.isVisible()) {
+            mainWindow.hide()
+          } else {
+            mainWindow.showInactive()
+          }
+          return { success: true }
+        } catch (error) {
+          console.error('Error toggling window visibility:', error)
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }
+        }
+      }
     )
 
-    this.windowResizing = true
-    this.mainWindow.setResizable(true)
+    // Window resize handler
+    ipcMain.handle('update-sizes', async (): Promise<{ success: boolean; error?: string }> => {
+      try {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+          return { success: false, error: 'Window has been destroyed' }
+        }
 
-    const frameRate = 60 // 60 FPS
-    const totalFrames = Math.floor(this.RESIZE_ANIMATION_DURATION / (1000 / frameRate))
-    let currentFrame = 0
+        // Get current view and layout mode from renderer
+        let viewName: ViewType, layoutMode: string
+        try {
+          viewName = await mainWindow.webContents.executeJavaScript(
+            'window.cheddar && window.cheddar.getCurrentView ? window.cheddar.getCurrentView() : "main"'
+          )
+          layoutMode =
+            (await mainWindow.webContents.executeJavaScript(
+              'window.cheddar && window.cheddar.getLayoutMode ? window.cheddar.getLayoutMode() : "normal"'
+            )) || 'normal'
+        } catch (error) {
+          console.warn('Failed to get view/layout from renderer, using defaults:', error)
+          viewName = 'main'
+          layoutMode = 'normal'
+        }
 
-    const widthDiff = targetWidth - startWidth
-    const heightDiff = targetHeight - startHeight
+        console.log('Size update requested for view:', viewName, 'layout:', layoutMode)
 
-    const animate = () => {
-      if (!this.mainWindow || this.mainWindow.isDestroyed()) {
-        this.windowResizing = false
-        return
+        const { targetWidth, targetHeight } = calculateWindowSize(viewName, layoutMode)
+        await animateWindowResize(targetWidth, targetHeight, `${viewName} view (${layoutMode})`)
+
+        return { success: true }
+      } catch (error) {
+        console.error('Error updating sizes:', error)
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
       }
-
-      currentFrame++
-      const progress = currentFrame / totalFrames
-
-      // Use easing function (ease-out)
-      const easedProgress = 1 - Math.pow(1 - progress, 3)
-
-      const currentWidth = Math.round(startWidth + widthDiff * easedProgress)
-      const currentHeight = Math.round(startHeight + heightDiff * easedProgress)
-
-      this.mainWindow.setSize(currentWidth, currentHeight)
-
-      // Re-center the window during animation
-      const primaryDisplay = screen.getPrimaryDisplay()
-      const { width: screenWidth } = primaryDisplay.workAreaSize
-      const x = Math.floor((screenWidth - currentWidth) / 2)
-      const y = 0
-      this.mainWindow.setPosition(x, y)
-
-      if (currentFrame >= totalFrames) {
-        this.windowResizing = false
-        this.mainWindow.setResizable(false)
-
-        // Ensure final size is exact
-        this.mainWindow.setSize(targetWidth, targetHeight)
-        const finalX = Math.floor((screenWidth - targetWidth) / 2)
-        this.mainWindow.setPosition(finalX, 0)
-
-        console.log(`Animation complete: ${targetWidth}x${targetHeight}`)
-      } else {
-        this.resizeAnimation = setTimeout(animate, 1000 / frameRate)
-      }
-    }
-
-    animate()
+    })
   }
 
-  public sendToRenderer(channel: string, data: any): void {
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send(channel, data)
-    }
-  }
+  const getMainWindow = (): BrowserWindow | null => mainWindow
 
-  public getMainWindow(): BrowserWindow | null {
-    return this.mainWindow
-  }
-
-  public cleanup(): void {
+  const cleanup = (): void => {
     // Unregister all global shortcuts
     globalShortcut.unregisterAll()
 
     // Clear any pending animations
-    if (this.resizeAnimation) {
-      clearTimeout(this.resizeAnimation)
-      this.resizeAnimation = null
+    if (resizeAnimation) {
+      clearTimeout(resizeAnimation)
+      resizeAnimation = null
     }
 
     // Close main window
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.close()
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close()
     }
 
-    this.mainWindow = null
-    this.windowResizing = false
-    this.mouseEventsIgnored = false
+    mainWindow = null
+    windowResizing = false
+    mouseEventsIgnored = false
 
     console.log('WindowManager cleanup completed')
+  }
+
+  // Constructor logic
+  ensureDataDirectories()
+
+  return {
+    createMainWindow,
+    updateGlobalShortcuts,
+    setupIpcHandlers,
+    sendToRenderer,
+    getMainWindow,
+    cleanup,
   }
 }
