@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import type { KeybindConfig, ViewType } from '@shared/types'
+import type { IpcEvents, KeybindConfig, ViewType } from '@shared/types'
 import { BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, session } from 'electron'
 export const createWindowManager = () => {
   let mainWindow: BrowserWindow | null = null
@@ -391,7 +391,7 @@ export const createWindowManager = () => {
     })
   }
 
-  const sendToRenderer = (channel: string, data: any): void => {
+  const sendToRenderer = <K extends keyof IpcEvents>(channel: K, data: IpcEvents[K]): void => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send(channel, data)
     }

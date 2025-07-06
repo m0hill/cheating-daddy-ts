@@ -1,3 +1,4 @@
+import type { IpcEvents, KeybindConfig } from '@shared/types'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import started from 'electron-squirrel-startup'
 import { geminiService } from './gemini/GeminiService'
@@ -42,7 +43,7 @@ const setupGeneralIpcHandlers = (manager: ReturnType<typeof createWindowManager>
     }
   )
 
-  ipcMain.on('update-keybinds', (_, newKeybinds: any) => {
+  ipcMain.on('update-keybinds', (_, newKeybinds: KeybindConfig) => {
     manager.updateGlobalShortcuts(newKeybinds)
   })
 
@@ -99,7 +100,7 @@ const cleanup = (): void => {
 }
 
 //function to send messages to renderer
-export const sendToRenderer = (channel: string, data: any): void => {
+export const sendToRenderer = <K extends keyof IpcEvents>(channel: K, data: IpcEvents[K]): void => {
   if (windowManagerInstance) {
     windowManagerInstance.sendToRenderer(channel, data)
   }

@@ -1,8 +1,17 @@
-import type { ProfileType } from '@shared/types'
+import type { ImageQuality, ProfileType, ScreenshotInterval } from '@shared/types'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFontSize, useIpc, useMediaCapture } from '../../hooks'
 import { useAppStore } from '../../stores/appStore'
+
+declare global {
+  interface Window {
+    marked: {
+      setOptions: (options: Record<string, unknown>) => void
+      parse: (markdown: string) => string
+    }
+  }
+}
 
 const AssistantView = () => {
   const { responses, currentResponseIndex, selectedProfile, setCurrentResponseIndex } =
@@ -34,15 +43,15 @@ const AssistantView = () => {
   // Render markdown content
   const renderMarkdown = useCallback((content: string): string => {
     // Check if marked is available globally
-    if (typeof (window as any).marked !== 'undefined') {
+    if (typeof window.marked !== 'undefined') {
       try {
         // Configure marked for better security and formatting
-        ;(window as any).marked.setOptions({
+        window.marked.setOptions({
           breaks: true,
           gfm: true,
           sanitize: false, // We trust the AI responses
         })
-        const rendered = (window as any).marked.parse(content)
+        const rendered = window.marked.parse(content)
         console.log('Markdown rendered successfully')
         return rendered
       } catch (error) {
@@ -150,10 +159,12 @@ const AssistantView = () => {
   useEffect(() => {
     const initializeCapture = async () => {
       try {
-        const screenshotInterval = localStorage.getItem('selectedScreenshotInterval') || '5'
-        const imageQuality = localStorage.getItem('selectedImageQuality') || 'medium'
+        const screenshotInterval =
+          (localStorage.getItem('selectedScreenshotInterval') as ScreenshotInterval) || '5'
+        const imageQuality =
+          (localStorage.getItem('selectedImageQuality') as ImageQuality) || 'medium'
 
-        await startCapture(screenshotInterval as any, imageQuality as any)
+        await startCapture(screenshotInterval, imageQuality)
       } catch (error) {
         console.error('Failed to start media capture:', error)
       }

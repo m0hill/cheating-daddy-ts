@@ -1,4 +1,18 @@
+import type { ImageQuality, LayoutMode, ViewType } from '@shared/types'
 import { useAppStore } from '../stores/appStore'
+
+interface CheddarApi {
+  handleShortcut: (shortcutKey: string) => void
+  getCurrentView: () => ViewType
+  getLayoutMode: () => LayoutMode
+}
+
+declare global {
+  interface Window {
+    cheddar: CheddarApi
+    captureManualScreenshot: (imageQuality?: ImageQuality) => Promise<void>
+  }
+}
 
 // Global shortcut handler function
 export const handleShortcut = (shortcutKey: string): void => {
@@ -32,8 +46,8 @@ export const handleShortcut = (shortcutKey: string): void => {
       console.log('Taking manual screenshot from assistant view')
 
       // Trigger manual screenshot via global function if available
-      if (typeof (window as any).captureManualScreenshot === 'function') {
-        ;(window as any).captureManualScreenshot()
+      if (typeof window.captureManualScreenshot === 'function') {
+        void window.captureManualScreenshot()
       } else {
         console.warn('captureManualScreenshot function not available on AssistantView.')
       }
@@ -44,7 +58,7 @@ export const handleShortcut = (shortcutKey: string): void => {
 // Set up global window functions for backward compatibility
 export const setupGlobalShortcuts = (): void => {
   // Make shortcut handler available globally
-  ;(window as any).cheddar = {
+  window.cheddar = {
     handleShortcut,
     getCurrentView: () => useAppStore.getState().currentView,
     getLayoutMode: () => useAppStore.getState().layoutMode,

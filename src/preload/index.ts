@@ -1,4 +1,9 @@
-import type { PlatformInfo, ProfileType } from '@shared/types'
+import type {
+  KeybindConfig,
+  PlatformInfo,
+  ProfileType,
+  SaveConversationTurnPayload,
+} from '@shared/types'
 import { contextBridge, ipcRenderer } from 'electron'
 
 // Platform detection
@@ -60,13 +65,13 @@ const electronAPI = {
   send: {
     viewChanged: (view: string) => ipcRenderer.send('view-changed', view),
 
-    updateKeybinds: (keybinds: any) => ipcRenderer.send('update-keybinds', keybinds),
+    updateKeybinds: (keybinds: KeybindConfig) => ipcRenderer.send('update-keybinds', keybinds),
   },
 
   // Event listeners (main -> renderer)
   on: {
     updateResponse: (callback: (response: string) => void) => {
-      const listener = (_: any, response: string) => callback(response)
+      const listener = (_: unknown, response: string) => callback(response)
       ipcRenderer.on('update-response', listener)
       return () => {
         ipcRenderer.removeListener('update-response', listener)
@@ -74,7 +79,7 @@ const electronAPI = {
     },
 
     updateStatus: (callback: (status: string) => void) => {
-      const listener = (_: any, status: string) => callback(status)
+      const listener = (_: unknown, status: string) => callback(status)
       ipcRenderer.on('update-status', listener)
       return () => {
         ipcRenderer.removeListener('update-status', listener)
@@ -82,7 +87,7 @@ const electronAPI = {
     },
 
     sessionInitializing: (callback: (isInitializing: boolean) => void) => {
-      const listener = (_: any, isInitializing: boolean) => callback(isInitializing)
+      const listener = (_: unknown, isInitializing: boolean) => callback(isInitializing)
       ipcRenderer.on('session-initializing', listener)
       return () => {
         ipcRenderer.removeListener('session-initializing', listener)
@@ -90,15 +95,15 @@ const electronAPI = {
     },
 
     clickThroughToggled: (callback: (isEnabled: boolean) => void) => {
-      const listener = (_: any, isEnabled: boolean) => callback(isEnabled)
+      const listener = (_: unknown, isEnabled: boolean) => callback(isEnabled)
       ipcRenderer.on('click-through-toggled', listener)
       return () => {
         ipcRenderer.removeListener('click-through-toggled', listener)
       }
     },
 
-    saveConversationTurn: (callback: (data: any) => void) => {
-      const listener = (_: any, data: any) => callback(data)
+    saveConversationTurn: (callback: (data: SaveConversationTurnPayload) => void) => {
+      const listener = (_: unknown, data: SaveConversationTurnPayload) => callback(data)
       ipcRenderer.on('save-conversation-turn', listener)
       return () => {
         ipcRenderer.removeListener('save-conversation-turn', listener)

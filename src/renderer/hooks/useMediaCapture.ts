@@ -2,6 +2,11 @@ import type { ImageQuality, ScreenshotInterval } from '@shared/types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useIpc } from './index'
 
+declare global {
+  interface Window {
+    captureManualScreenshot: (imageQuality?: ImageQuality) => Promise<void>
+  }
+}
 interface TokenEntry {
   timestamp: number
   count: number
@@ -315,7 +320,7 @@ export const useMediaCapture = () => {
       tokenTrackerRef.current = { tokens: [], audioStartTime: null }
 
       try {
-        let displayMediaOptions: DisplayMediaStreamOptions = {
+        const displayMediaOptions: DisplayMediaStreamOptions = {
           video: { frameRate: 1, width: { ideal: 1920 }, height: { ideal: 1080 } },
           audio: false,
         }
@@ -385,12 +390,12 @@ export const useMediaCapture = () => {
   )
 
   useEffect(() => {
-    ;(window as any).captureManualScreenshot = captureManualScreenshot
+    window.captureManualScreenshot = captureManualScreenshot
     console.log('captureManualScreenshot function has been attached to the window object.')
 
     // Cleanup function to remove it when the component unmounts
     return () => {
-      delete (window as any).captureManualScreenshot
+      delete (window as Partial<Window>).captureManualScreenshot
       console.log('captureManualScreenshot function has been removed from the window object.')
     }
   }, [captureManualScreenshot])
@@ -401,7 +406,7 @@ export const useMediaCapture = () => {
     // It must be a synchronous function.
     return () => {
       // We call the async stopCapture but do not return the promise it generates.
-      stopCapture()
+      void stopCapture()
     }
   }, [stopCapture])
 
