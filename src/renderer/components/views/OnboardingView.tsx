@@ -67,7 +67,7 @@ export default function OnboardingView({ onComplete, onClose: _onClose }: Onboar
   const slides = [
     {
       icon: '/assets/onboarding/welcome.svg',
-      title: 'Welcome to Cheating Daddy',
+      title: 'Welcome to HOPE',
       content:
         'Your AI assistant that listens and watches, then provides intelligent suggestions automatically during interviews and meetings.',
     },

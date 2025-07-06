@@ -1,13 +1,13 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type {
   AppState,
-  ViewType,
-  ProfileType,
-  LayoutMode,
   ImageQuality,
+  LayoutMode,
+  ProfileType,
   ScreenshotInterval,
+  ViewType,
 } from '@shared/types'
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 interface AppStore extends AppState {
   // View management
@@ -176,7 +176,7 @@ export const useAppStore = create<AppStore>()(
       },
     }),
     {
-      name: 'cheating-daddy-store',
+      name: 'dupe-store',
       // Only persist certain state
       partialize: state => ({
         selectedProfile: state.selectedProfile,

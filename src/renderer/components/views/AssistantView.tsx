@@ -173,7 +173,7 @@ export default function AssistantView() {
   return (
     <div className="flex h-full flex-col font-sans">
       <div
-        className="response-container h-[calc(100%-60px)] overflow-y-auto rounded-lg bg-[--main-content-background] p-4"
+        className="response-container h-[calc(100%-60px)] overflow-y-auto rounded-lg [background:var(--main-content-background)] p-4"
         ref={responseContainerRef}
         style={{ fontSize: `${fontSize}px`, lineHeight: 1.6, scrollBehavior: 'smooth' }}
       />

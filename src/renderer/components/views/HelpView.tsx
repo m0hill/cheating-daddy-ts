@@ -1,4 +1,4 @@
-import { Github, Globe, MessageSquare } from 'lucide-react'
+import { Github } from 'lucide-react'
 import { useEffect } from 'react'
 import { useIpc, useKeybinds, useWindowResize } from '../../hooks'
 
@@ -7,7 +7,6 @@ export default function HelpView() {
   const { resizeForCurrentView } = useWindowResize()
   const { keybinds } = useKeybinds()
 
-  // Resize window when component mounts
   useEffect(() => {
     resizeForCurrentView()
   }, [resizeForCurrentView])
@@ -48,21 +47,9 @@ export default function HelpView() {
           <div className="flex flex-wrap gap-3">
             <div
               className="flex cursor-pointer items-center gap-1.5 rounded border border-[--input-border] bg-[--input-background] px-2.5 py-1.5 text-xs font-medium text-[--link-color] transition-all hover:border-[--link-color] hover:bg-[--input-hover-background]"
-              onClick={() => handleExternalLinkClick('https://cheatingdaddy.com')}
-            >
-              <Globe size={14} /> Official Website
-            </div>
-            <div
-              className="flex cursor-pointer items-center gap-1.5 rounded border border-[--input-border] bg-[--input-background] px-2.5 py-1.5 text-xs font-medium text-[--link-color] transition-all hover:border-[--link-color] hover:bg-[--input-hover-background]"
-              onClick={() => handleExternalLinkClick('https://github.com/sohzm/cheating-daddy')}
+              onClick={() => handleExternalLinkClick('https://github.com/mohilcode/hope')}
             >
               <Github size={14} /> GitHub Repository
-            </div>
-            <div
-              className="flex cursor-pointer items-center gap-1.5 rounded border border-[--input-border] bg-[--input-background] px-2.5 py-1.5 text-xs font-medium text-[--link-color] transition-all hover:border-[--link-color] hover:bg-[--input-hover-background]"
-              onClick={() => handleExternalLinkClick('https://discord.gg/GCBdubnXfJ')}
-            >
-              <MessageSquare size={14} /> Discord Community
             </div>
           </div>
         </OptionGroup>

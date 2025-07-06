@@ -12,7 +12,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     extraResource: ['./assets/SystemAudioDump'],
-    name: 'Cheating Daddy',
+    name: 'HOPE',
     icon: './assets/logo', // Will use .icns on macOS, .ico on Windows, .png on Linux
     // macOS signing configuration (commented out for development)
     // osxSign: {
@@ -25,11 +25,11 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
-      name: 'cheating-daddy',
+      name: 'hope',
     }),
     new MakerDMG(
       {
-        name: 'Cheating Daddy',
+        name: 'HOPE',
       },
       ['darwin']
     ),

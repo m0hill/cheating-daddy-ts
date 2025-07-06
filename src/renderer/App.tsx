@@ -11,7 +11,6 @@ import MainView from './components/views/MainView'
 import OnboardingView from './components/views/OnboardingView'
 import { useIpc, useWindowResize } from './hooks'
 import { useAppStore } from './stores/appStore'
-import './index.css'
 
 function App() {
   const {
@@ -137,7 +136,7 @@ function App() {
 
   const handleAPIKeyHelp: MainViewProps['onAPIKeyHelp'] = async () => {
     try {
-      await electronAPI.invoke.openExternal('https://cheatingdaddy.com/help/api-key')
+      await electronAPI.invoke.openExternal('https://aistudio.google.com/app/apikey')
     } catch (error) {
       console.error('Error opening external URL:', error)
     }
@@ -172,7 +171,7 @@ function App() {
   }
 
   const mainContentClass = clsx(
-    'flex-1 overflow-y-auto bg-[--main-content-background] transition-all duration-150 ease-out',
+    'flex-1 overflow-y-auto [background:var(--main-content-background)] transition-all duration-150 ease-out',
     {
       'p-2.5 [margin-top:var(--main-content-margin-top)] [border-radius:var(--content-border-radius)]':
         currentView !== 'onboarding',
