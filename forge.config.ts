@@ -13,12 +13,12 @@ const config: ForgeConfig = {
     asar: true,
     extraResource: ['./assets/SystemAudioDump'],
     name: 'HOPE',
-    icon: './assets/logo', // Will use .icns on macOS, .ico on Windows, .png on Linux
-    // macOS signing configuration (commented out for development)
+    icon: './assets/logo',
     // osxSign: {
-    //   identity: '<your-identity>',
-    //   optionsForFile: (filePath) => ({
+    //   identity: '-',
+    //   optionsForFile: () => ({
     //     entitlements: 'entitlements.plist',
+    //     hardenedRuntime: true
     //   }),
     // },
   },

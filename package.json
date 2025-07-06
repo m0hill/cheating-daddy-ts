@@ -5,17 +5,16 @@
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
-    "package": "pnpm run build:css && electron-forge package",
-    "make": "pnpm run build:css && electron-forge make",
-    "publish": "electron-forge publish",
+    "make": "electron-forge make",
     "lint": "pnpm dlx oxlint@latest",
     "format": "biome format --write ./src",
-    "type-check": "tsc --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "license": "GPL-3.0",
   "dependencies": {
     "@google/genai": "^1.2.0",
     "@tailwindcss/postcss": "^4.1.11",
+    "bufferutil": "^4.0.9",
     "clsx": "^2.1.0",
     "electron-squirrel-startup": "^1.0.1",
     "lucide-react": "^0.525.0",
@@ -23,6 +22,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwindcss": "^4.1.11",
+    "utf-8-validate": "^6.0.5",
     "zustand": "^4.4.7"
   },
   "devDependencies": {

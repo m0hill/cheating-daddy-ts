@@ -1,7 +1,6 @@
-import { defineConfig } from 'vite';
-import path from 'node:path';
+import path from 'node:path'
+import { defineConfig } from 'vite'
 
-// https://vitejs.dev/config
 export default defineConfig({
   resolve: {
     alias: {
@@ -9,16 +8,14 @@ export default defineConfig({
     },
   },
   build: {
-    // This is the key change
     lib: {
       entry: 'src/main/index.ts',
       formats: ['cjs'],
       fileName: 'main',
     },
     rollupOptions: {
-      external: ['electron', '@google/genai'],
+      external: ['electron'],
     },
-    // Recommended: Prevent multiple builds from interfering with each other
     emptyOutDir: false,
   },
-});
+})

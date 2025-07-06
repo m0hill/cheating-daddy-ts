@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import started from 'electron-squirrel-startup'
 import { GeminiService } from './gemini/GeminiService'
 import { WindowManager } from './window/WindowManager'
@@ -39,35 +39,7 @@ class Application {
     })
   }
 
-  /**
-   * Clears all runtime cache and storage data for the application.
-   */
-  private async clearCacheAndStorage(): Promise<void> {
-    try {
-      const defaultSession = session.defaultSession
-      await defaultSession.clearCache()
-      await defaultSession.clearStorageData({
-        storages: [
-          'cookies',
-          'filesystem',
-          'indexdb',
-          'localstorage',
-          'shadercache',
-          'websql',
-          'serviceworkers',
-          'cachestorage',
-        ],
-      })
-      console.log('✅ Cache and storage cleared successfully.')
-    } catch (error) {
-      console.error('❌ Failed to clear cache and storage:', error)
-    }
-  }
-
   private async initialize(): Promise<void> {
-    // Clear cache and storage every time the app starts
-    await this.clearCacheAndStorage()
-
     try {
       // Initialize services
       this.geminiService = new GeminiService()

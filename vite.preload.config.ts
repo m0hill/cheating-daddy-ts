@@ -1,7 +1,6 @@
-import { defineConfig } from 'vite';
-import path from 'node:path';
+import path from 'node:path'
+import { defineConfig } from 'vite'
 
-// https://vitejs.dev/config
 export default defineConfig({
   resolve: {
     alias: {
@@ -9,15 +8,14 @@ export default defineConfig({
     },
   },
   build: {
-    // Add this 'lib' section to properly build the preload script
     lib: {
       entry: 'src/preload/index.ts',
       formats: ['cjs'],
-      fileName: 'preload', // Name the output file preload.js
+      fileName: 'preload',
     },
     rollupOptions: {
       external: ['electron'],
     },
     emptyOutDir: false,
   },
-});
+})

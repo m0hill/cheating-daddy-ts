@@ -104,7 +104,7 @@ export default function AppHeader({
           {electronAPI.platform.isMacOS ? 'Cmd' : 'Ctrl'}
         </span>
         <span className="px-1.5 py-0.5 rounded text-xs font-mono [background:var(--key-background)]">
-          &bsol;
+          \
         </span>
       </button>
       <button onClick={onCloseClick} className={iconButtonClasses} title="Close Session">
