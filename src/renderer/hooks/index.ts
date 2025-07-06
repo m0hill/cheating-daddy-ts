@@ -116,10 +116,10 @@ export function useKeyboard(keybind: string, callback: () => void, enabled: bool
 // Helper function to get default keybinds
 function getDefaultKeybinds(isMacOS: boolean): KeybindConfig {
   return {
-    moveUp: isMacOS ? 'Alt+Up' : 'Ctrl+Up',
-    moveDown: isMacOS ? 'Alt+Down' : 'Ctrl+Down',
-    moveLeft: isMacOS ? 'Alt+Left' : 'Ctrl+Left',
-    moveRight: isMacOS ? 'Alt+Right' : 'Ctrl+Right',
+    moveUp: isMacOS ? 'Cmd+Up' : 'Ctrl+Up',
+    moveDown: isMacOS ? 'Cmd+Down' : 'Ctrl+Down',
+    moveLeft: isMacOS ? 'Cmd+Left' : 'Ctrl+Left',
+    moveRight: isMacOS ? 'Cmd+Right' : 'Ctrl+Right',
     toggleVisibility: isMacOS ? 'Cmd+\\' : 'Ctrl+\\',
     toggleClickThrough: isMacOS ? 'Cmd+M' : 'Ctrl+M',
     nextStep: isMacOS ? 'Cmd+Enter' : 'Ctrl+Enter',

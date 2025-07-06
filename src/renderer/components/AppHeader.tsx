@@ -62,7 +62,7 @@ export default function AppHeader({
   }
 
   const iconButtonClasses =
-    'bg-none p-0 border-none rounded-lg opacity-60 hover:bg-[--hover-background] hover:opacity-100 transition-opacity cursor-pointer [color:var(--icon-button-color)] [padding:var(--header-icon-padding)]'
+    'bg-none p-0 border-none rounded-lg opacity-60 hover:bg-[--hover-background] hover:opacity-100 transition-opacity [color:var(--icon-button-color)] [padding:var(--header-icon-padding)] cursor-pointer'
   const iconProps = {
     className: '[width:var(--icon-size)] [height:var(--icon-size)]',
     strokeWidth: 1.7,
@@ -83,6 +83,10 @@ export default function AppHeader({
       </button>
       <button className={iconButtonClasses} onClick={onHelpClick} title="Help">
         <HelpCircle {...iconProps} />
+      </button>
+      <div className="h-4 w-px bg-[rgba(255,255,255,0.2)] mx-1"></div>
+      <button className={iconButtonClasses} onClick={onCloseClick} title="Close Application">
+        <X {...iconProps} />
       </button>
     </>
   )
