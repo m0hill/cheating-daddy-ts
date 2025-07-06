@@ -45,15 +45,15 @@ const AppHeader = ({
 
   const getViewTitle = (): string => {
     const titles: Record<ViewType, string> = {
-      onboarding: 'Welcome to HOPE',
-      main: 'H O P E',
+      onboarding: 'Welcome to Cheating Daddy',
+      main: 'Cheating Daddy',
       customize: 'Customize',
       help: 'Help & Shortcuts',
       history: 'Conversation History',
       advanced: 'Advanced Tools',
-      assistant: 'Hope',
+      assistant: 'Cheating Daddy',
     }
-    return titles[currentView] || 'Hope'
+    return titles[currentView] || 'Cheating Daddy'
   }
 
   const isNavigationView = (): boolean => {

@@ -67,7 +67,7 @@ const OnboardingView = ({ onComplete, onClose: _onClose }: OnboardingViewProps) 
   const slides = [
     {
       icon: Heart,
-      title: 'Welcome to HOPE',
+      title: 'Welcome to Cheating Daddy',
       content:
         'Your AI assistant that listens and watches, then provides intelligent suggestions automatically during interviews and meetings.',
     },
