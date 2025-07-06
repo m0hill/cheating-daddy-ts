@@ -1,6 +1,6 @@
 import type { OnboardingViewProps } from '@shared/types'
 import clsx from 'clsx'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle, FileText, Heart, Settings, Shield } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // Subtle dark color schemes for each slide
@@ -66,32 +66,32 @@ export default function OnboardingView({ onComplete, onClose: _onClose }: Onboar
 
   const slides = [
     {
-      icon: '/assets/onboarding/welcome.svg',
+      icon: Heart,
       title: 'Welcome to HOPE',
       content:
         'Your AI assistant that listens and watches, then provides intelligent suggestions automatically during interviews and meetings.',
     },
     {
-      icon: '/assets/onboarding/security.svg',
+      icon: Shield,
       title: 'Completely Private',
       content:
         'Invisible to screen sharing apps and recording software. Your secret advantage stays completely hidden from others.',
     },
     {
-      icon: '/assets/onboarding/context.svg',
+      icon: FileText,
       title: 'Add Your Context',
       content:
         'Share relevant information to help the AI provide better, more personalized assistance.',
       showTextarea: true,
     },
     {
-      icon: '/assets/onboarding/customize.svg',
+      icon: Settings,
       title: 'Additional Features',
       content: '',
       showFeatures: true,
     },
     {
-      icon: '/assets/onboarding/ready.svg',
+      icon: CheckCircle,
       title: 'Ready to Go',
       content:
         'Add your Gemini API key in settings and start getting AI-powered assistance in real-time.',
@@ -186,18 +186,17 @@ export default function OnboardingView({ onComplete, onClose: _onClose }: Onboar
   }
 
   const slide = slides[currentSlide]
+  const IconComponent = slide.icon
   const navButtonClasses =
-    'flex items-center justify-center min-w-9 min-h-9 rounded-md border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-medium text-[#e5e5e5] transition-all duration-200 ease-in-out hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.12)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40'
+    'flex items-center justify-center min-w-9 min-h-9 rounded-md border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-medium text-[#e5e5e5] transition-all duration-200 ease-in-out hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.12)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer'
 
   return (
     <div className="relative h-full w-full select-none overflow-hidden bg-[#0a0a0a] font-sans">
       <canvas ref={canvasRef} className="absolute inset-0 z-0 h-full w-full"></canvas>
       <div className="absolute inset-x-0 top-0 bottom-[60px] z-10 mx-auto flex max-w-lg flex-col justify-center overflow-hidden p-12 text-[#e5e5e5]">
-        <img
-          className="block h-12 w-12 mb-4 opacity-90"
-          src={slide.icon}
-          alt={`${slide.title} icon`}
-        />
+        <div className="mb-4 opacity-90">
+          <IconComponent size={48} strokeWidth={1.5} className="text-white" />
+        </div>
         <div className="mb-3 text-3xl font-semibold leading-tight text-white">{slide.title}</div>
         <div className="mb-6 text-base font-normal leading-normal text-[#b8b8b8]">
           {slide.content}

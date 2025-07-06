@@ -93,7 +93,7 @@ export default function MainView({ onStart, onAPIKeyHelp }: MainViewProps) {
       return (
         <>
           Start Session
-          <span className="flex items-center gap-0.5 ml-1">
+          <span className="flex items-center gap-0.5 ml-1 cursor-pointer">
             <Command size={14} />
             <CornerDownLeft size={14} />
           </span>
@@ -103,7 +103,7 @@ export default function MainView({ onStart, onAPIKeyHelp }: MainViewProps) {
       return (
         <>
           Start Session
-          <span className="flex items-center gap-0.5 ml-1">
+          <span className="flex items-center gap-0.5 ml-1 cursor-pointer">
             Ctrl
             <CornerDownLeft size={14} />
           </span>
