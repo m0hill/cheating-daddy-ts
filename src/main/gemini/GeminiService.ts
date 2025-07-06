@@ -105,7 +105,7 @@ const createGeminiService = () => {
       console.log('Sending reconnection context with', transcriptions.length, 'previous questions')
 
       // Send the context message to the new session
-      await currentSession.sendRealtimeInput({
+      currentSession.sendRealtimeInput({
         text: contextMessage,
       })
     } catch (error) {
@@ -230,7 +230,7 @@ const createGeminiService = () => {
 
     try {
       process.stdout.write('.')
-      await currentSession.sendRealtimeInput({
+      currentSession.sendRealtimeInput({
         audio: {
           data: base64Data,
           mimeType: 'audio/pcm;rate=24000',
@@ -532,7 +532,7 @@ const createGeminiService = () => {
       if (!currentSession) return { success: false, error: 'No active Gemini session' }
       try {
         process.stdout.write('.')
-        await currentSession.sendRealtimeInput({
+        currentSession.sendRealtimeInput({
           audio: { data: content.data, mimeType: content.mimeType },
         })
         return { success: true }
@@ -560,7 +560,7 @@ const createGeminiService = () => {
         }
 
         process.stdout.write('!')
-        await currentSession.sendRealtimeInput({
+        currentSession.sendRealtimeInput({
           media: { data: content.data, mimeType: 'image/jpeg' },
         })
 
@@ -581,7 +581,7 @@ const createGeminiService = () => {
         }
 
         console.log('Sending text message:', text)
-        await currentSession.sendRealtimeInput({ text: text.trim() })
+        currentSession.sendRealtimeInput({ text: text.trim() })
         return { success: true }
       } catch (error) {
         console.error('Error sending text:', error)
@@ -627,7 +627,7 @@ const createGeminiService = () => {
 
         // Cleanup any pending resources and stop audio/video capture
         if (currentSession) {
-          await currentSession.close()
+          currentSession.close()
           currentSession = null
         }
 
