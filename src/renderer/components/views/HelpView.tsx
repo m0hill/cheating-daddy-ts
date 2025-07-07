@@ -47,7 +47,7 @@ const HelpView = () => {
           <div className="flex flex-wrap gap-3">
             <div
               className="flex cursor-pointer items-center gap-1.5 rounded border border-[--input-border] bg-[--input-background] px-2.5 py-1.5 text-xs font-medium text-[--link-color] transition-all hover:border-[--link-color] hover:bg-[--input-hover-background]"
-              onClick={() => handleExternalLinkClick('https://github.com/m0hill/hope')}
+              onClick={() => handleExternalLinkClick('https://github.com/m0hill/cheating-daddy-ts')}
             >
               <Github size={14} /> GitHub Repository
             </div>
